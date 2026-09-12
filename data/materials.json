@@ -1,0 +1,17 @@
+[
+  {
+    "material_id": "ld_slag",
+    "name": "LD (Linz-Donawitz) Steel Slag",
+    "composition_pct": {"CaO": 45, "SiO2": 15, "Fe2O3": 20, "MgO": 8},
+    "applications": [
+      {
+        "application": "cement_clinker_substitute",
+        "min_quality_requirements": {"CaO_min_pct": 40}
+      },
+      {
+        "application": "road_construction_aggregate",
+        "min_quality_requirements": {}
+      }
+    ]
+  }
+]

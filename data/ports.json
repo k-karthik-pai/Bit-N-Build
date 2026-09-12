@@ -1,0 +1,5 @@
+[
+  {"port_id": "dhamra", "name": "Dhamra Port", "country": "India", "lat": 20.79, "lon": 86.98},
+  {"port_id": "chittagong", "name": "Chittagong Port", "country": "Bangladesh", "lat": 22.33, "lon": 91.83},
+  {"port_id": "mongla", "name": "Mongla Port", "country": "Bangladesh", "lat": 22.49, "lon": 89.60}
+]

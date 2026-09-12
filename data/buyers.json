@@ -1,0 +1,62 @@
+[
+  {
+    "buyer_id": "stub_buyer_1",
+    "name": "Stub Cement Co. 1",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 40000,
+    "max_acceptable_price_per_tonne_usd": 26,
+    "min_quality_requirements": {"CaO_min_pct": 40},
+    "is_real_reference": false,
+    "source_note": "STUB placeholder for schema/dev testing only - Track A to replace with real dataset"
+  },
+  {
+    "buyer_id": "stub_buyer_2",
+    "name": "Stub Cement Co. 2",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 25000,
+    "max_acceptable_price_per_tonne_usd": 24,
+    "min_quality_requirements": {"CaO_min_pct": 38},
+    "is_real_reference": false,
+    "source_note": "STUB placeholder for schema/dev testing only - Track A to replace with real dataset"
+  },
+  {
+    "buyer_id": "stub_buyer_3",
+    "name": "Stub Cement Co. 3",
+    "country": "Bangladesh",
+    "port_id": "mongla",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 60000,
+    "max_acceptable_price_per_tonne_usd": 28,
+    "min_quality_requirements": {"CaO_min_pct": 42},
+    "is_real_reference": false,
+    "source_note": "STUB placeholder for schema/dev testing only - Track A to replace with real dataset"
+  },
+  {
+    "buyer_id": "stub_buyer_4",
+    "name": "Stub Cement Co. 4",
+    "country": "Bangladesh",
+    "port_id": "mongla",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 15000,
+    "max_acceptable_price_per_tonne_usd": 23,
+    "min_quality_requirements": {},
+    "is_real_reference": false,
+    "source_note": "STUB placeholder for schema/dev testing only - Track A to replace with real dataset"
+  },
+  {
+    "buyer_id": "stub_buyer_5",
+    "name": "Stub Cement Co. 5",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 50000,
+    "max_acceptable_price_per_tonne_usd": 27,
+    "min_quality_requirements": {"CaO_min_pct": 41},
+    "is_real_reference": false,
+    "source_note": "STUB placeholder for schema/dev testing only - Track A to replace with real dataset"
+  }
+]

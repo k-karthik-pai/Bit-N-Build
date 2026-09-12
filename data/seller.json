@@ -1,0 +1,11 @@
+{
+  "seller_id": "tata_steel_bsl",
+  "name": "Tata Steel BSL",
+  "location": {"place": "Angul, Odisha, India", "lat": 20.84, "lon": 85.10},
+  "nearest_port_id": "dhamra",
+  "material_id": "ld_slag",
+  "available_quantity_tonnes_per_year": 100000,
+  "min_acceptable_price_per_tonne_usd": 22,
+  "preferred_price_per_tonne_usd": 25,
+  "current_disposal_cost_per_tonne_usd": 5
+}
