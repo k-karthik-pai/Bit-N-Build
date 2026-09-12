@@ -1,38 +1,41 @@
 # Action item: fix distance_km in data/routes.json
 
-## The problem
+## Status: Dhamra→Mongla fixed. Dhamra→Chittagong still open.
 
 `data/routes.json` currently has:
 
 ```json
 [
   {"from_port_id": "dhamra", "to_port_id": "chittagong", "distance_km": 1350, "base_cost_per_tonne_usd": 7},
-  {"from_port_id": "dhamra", "to_port_id": "mongla", "distance_km": 1250, "base_cost_per_tonne_usd": 6},
+  {"from_port_id": "dhamra", "to_port_id": "mongla", "distance_km": 439.5, "base_cost_per_tonne_usd": 6},
   {"from_port_id": "mongla", "to_port_id": "chittagong", "distance_km": 250, "base_cost_per_tonne_usd": 1.5},
   {"from_port_id": "chittagong", "to_port_id": "mongla", "distance_km": 250, "base_cost_per_tonne_usd": 1.5}
 ]
 ```
 
-The `1350` and `1250` values are almost certainly wrong. Confirmed via the
-straight-line (haversine) distance between the same coordinates already in
-`data/ports.json`:
+Dhamra→Mongla was fixed using a real lookup from
+[searoutesnav.com](https://searoutesnav.com/route/dhamra-in-anchorage-27093/to/mongla-bdmgl-11063):
+237.3 nm (23h 44m at 10.0 knots) = 439.5 km. Worth noting: that duration
+estimate (10.0 knots) matches `agents/logistics/__init__.py`'s own
+`CARGO_SHIP_SPEED_KM_PER_DAY` constant (444.5 km/day = 10.0 knots) almost
+exactly — good sign the transit-time model was already well-calibrated.
 
-| Route | Straight-line (verified) | Current routes.json | Ratio |
-|---|---|---|---|
-| Dhamra → Chittagong | 530 km | 1350 km | ~2.5x |
-| Dhamra → Mongla | 330 km | 1250 km | ~3.8x |
-| Chittagong ↔ Mongla | 230 km | 250 km | ~1.1x (fine, not flagged) |
+**Dhamra→Chittagong (currently 1350 km) is still wrong** and still needs a
+real number. Confirmed via the straight-line (haversine) distance between
+the same coordinates already in `data/ports.json`:
 
-A real sea route is never shorter than the straight line, but 2.5-4x is an
-implausible amount of detour for two ports on the same coastline with no
-major landmass to route around. The 1350/1250 numbers are most likely
-placeholders, or accidentally a land/river-routing distance instead of a
-sea-route distance. Only `distance_km` is suspect — the `base_cost_per_tonne_usd`
-values (7, 6, 1.5) look independently reasonable against real freight
-benchmarks and don't need to change.
+| Route | Straight-line (verified) | Real (searoutesnav.com) | Current routes.json | Status |
+|---|---|---|---|---|
+| Dhamra → Chittagong | 530 km | *not yet found* | 1350 km | **still needs fixing** |
+| Dhamra → Mongla | 330 km | 439.5 km | 439.5 km ✅ | fixed |
+| Chittagong ↔ Mongla | 230 km | — | 250 km | fine, not flagged |
 
-Only `distance_km` for the two Dhamra legs needs fixing; leave everything
-else in the file alone.
+A real sea route is never shorter than the straight line, but 1350 km is
+2.5x the 530 km floor — an implausible amount of detour for two ports on
+the same coastline with no major landmass to route around. Only
+`distance_km` is suspect — `base_cost_per_tonne_usd` values look
+independently reasonable against real freight benchmarks and don't need
+to change.
 
 ## Why this wasn't just fixed already
 
@@ -42,35 +45,29 @@ authoritative number and hit a wall specific to my environment:
 
 - Direct fetches to `ports.com`, `searates.com`, and `breezada.com`'s
   route-distance pages all failed (403 / unreachable) from this sandbox.
+- `searoutesnav.com` **is** reachable — that's what produced the working
+  Dhamra→Mongla number above. But its port search is JS-driven (autocomplete,
+  not a guessable URL), so I couldn't self-serve a Dhamra→Chittagong lookup
+  the same way — I could only read a route page whose exact URL was already
+  known (the one that gave us Mongla).
 - I tried to back into a number by finding *known* real Bay of Bengal sea
-  routes and computing an empirical straight-line-to-real-route multiplier:
-  - Chittagong ↔ Kolkata: real route 190 NM vs straight-line 196 NM → ratio ≈ 0.97x
-  - Kolkata ↔ Visakhapatnam: real route 576 NM vs straight-line 408 NM → ratio ≈ 1.41x
-
-  Those two disagree by 45%, meaning port-specific approach-channel geometry
-  (river mouths, sandbars, pilot stations — e.g. Mongla port sits ~71 NM up
-  the Possur river from open sea) dominates and there's no reliable generic
-  multiplier to apply here. Publishing a number from that method would just
-  be a differently-flawed guess, not the calculator-sourced value DATA.md
-  asks for.
-
-This needs someone with normal (non-sandboxed) internet access to actually
-run the calculator.
+  routes and computing an empirical straight-line-to-real-route multiplier
+  instead, but two different real routes gave conflicting ratios (0.97x and
+  1.41x) — not reliable enough to hand-estimate Dhamra→Chittagong from.
 
 ## What to do
 
-1. Go to [searates.com/distance-time](https://www.searates.com/distance-time/)
-   or [ports.com](http://ports.com/sea-route/).
-2. Look up:
-   - Dhamra Port, India → Chittagong Port, Bangladesh
-   - Dhamra Port, India → Mongla Port, Bangladesh
+1. Go to [searoutesnav.com](https://searoutesnav.com) (already proven to
+   work for this project — use its route search, origin "Dhamra", destination
+   "Chittagong" or "Chattogram") — or `searates.com/distance-time` /
+   `ports.com/sea-route` if you prefer.
+2. Look up: Dhamra Port, India → Chittagong Port, Bangladesh.
 3. Take the nautical-mile figure, convert to km (`nm * 1.852`), and update
-   `distance_km` for those two rows in `data/routes.json` only.
+   `distance_km` for that one row in `data/routes.json`.
 4. Leave `base_cost_per_tonne_usd` as-is unless you have a reason to change it.
-5. Sanity-check the result: it should land somewhere at or above the
-   straight-line floor (530 km / 330 km) — if the calculator gives you
-   something close to the current 1350/1250, double check you didn't
-   accidentally select a land-route or a different pair of ports.
+5. Sanity-check the result: it should land at or above the straight-line
+   floor (530 km) — if you get something close to the current 1350 km,
+   double check you didn't select a land-route or the wrong port pair.
 6. Flag the change to the team (same as any data swap, per `docs/brief-dataset.md`).
 
 ## Reference
