@@ -2,7 +2,7 @@
 
 Each prompt contains only the agent's own private constraints plus the public
 history (offers made, never reservation values). Tactics baked in per
-NEXT_STEPS.md §1: anchor outside preferred, concessions shrink, trade
+AGENTS.md §2: anchor outside preferred, concessions shrink, trade
 contract length/volume, cite leverage without numbers only when true,
 telegraph walk-away without stating reservation price.
 """

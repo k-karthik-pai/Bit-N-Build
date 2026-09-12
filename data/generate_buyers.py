@@ -1,13 +1,13 @@
 """
-Generates data/buyers.json per docs/brief-dataset.md step 4:
+Generates data/buyers.json per AGENTS.md §6:
   1. Hardcode real Bangladeshi cement companies (is_real_reference: true),
      accompanied by source notes for company profiles and port assumptions.
-     The original research report was not committed; see docs/LIMITATIONS.md.
+     Sources for the real anchors are in data/RESEARCH_FINDINGS.md.
   2. Generate synthetic entries (is_real_reference: false) by varying
      demand/price/port within realistic bounds around those anchors.
 
 Individual buyer demand/price figures are illustrative, anchored to
-published aggregate trade data (see docs/DATA.md's own framing note) - no
+published aggregate trade data (see README "Data and limitations") - no
 company publicly discloses LD-slag-specific purchase volumes, so exact
 figures here are modeled, not leaked/real contract terms. Demand is kept
 within a plausible fraction of the seller's 100,000 t/year total supply
@@ -223,7 +223,7 @@ def generate_synthetic_buyers(count: int, seed: int = 42) -> list[dict]:
 def contract_months_range(annual_demand_tonnes: int) -> tuple[int, int]:
     """
     Acceptable contract length (months) by demand tier - illustrative, not
-    researched (see docs/LIMITATIONS.md). Larger buyers can commit to longer
+    researched (see README "Data and limitations"). Larger buyers can commit to longer
     offtake; smaller ones want shorter exposure. Derived from demand rather
     than drawn from the seeded rng so existing generated values don't shift,
     and every tier contains 12 (the negotiation fallback's fixed term).

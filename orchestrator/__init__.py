@@ -6,7 +6,7 @@ Not a fourth agent with its own reasoning — a deterministic pipeline function.
 
 Step 1 extension: when use_llm=True or emit_event provided, runs one seller,
 N concurrent buyers (top 3-5) with live leverage via shared_state and emits
-EVENTS.md envelopes. Legacy sequential BATNA path is preserved for tests
+AGENTS.md §5 envelopes. Legacy sequential BATNA path is preserved for tests
 that call run_pipeline() without those flags.
 """
 
@@ -27,7 +27,7 @@ from agents.validation import number
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
 # ---------------------------------------------------------------------------
-# Fixed scenario (from PLAN.md, DATA.md, AGENTS.md)
+# Fixed scenario (AGENTS.md §4, §6)
 # ---------------------------------------------------------------------------
 
 FIXED_SCENARIO = {
@@ -150,7 +150,7 @@ def _get_logistics(origin: str, destination: str, cargo: int, deadline: int) -> 
     )
 
 # ---------------------------------------------------------------------------
-# New concurrent negotiation with EVENTS.md envelope helpers
+# New concurrent negotiation with AGENTS.md §5 envelope helpers
 # ---------------------------------------------------------------------------
 
 def _now_iso() -> str:
@@ -187,7 +187,7 @@ def _run_concurrent_negotiations(
     record: bool,
 ) -> tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]], Dict[str, float]]:
     """
-    Run top_n negotiations concurrently. Emits EVENTS.md envelopes if emit_event
+    Run top_n negotiations concurrently. Emits AGENTS.md §5 envelopes if emit_event
     provided. Returns (selected_buyers, deal_results, logistics_costs).
     """
     selected = ranked_buyers[:top_n]
@@ -393,7 +393,7 @@ def run_pipeline(
     Added for Step 1:
       use_llm: if True, negotiations use LLM-gated threaded loop (validator as gate)
       top_n: number of concurrent buyers (3-5) when in concurrent mode (default 3)
-      emit_event: callback receiving EVENTS.md envelope dicts for streaming UI
+      emit_event: callback receiving AGENTS.md §5 envelope dicts for streaming UI
       run_id: identifier for the run (generated if not supplied)
       record: write the event stream to runs/<run_id>.jsonl. The dashboard
         passes False because its RunStore is the single recording owner.

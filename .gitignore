@@ -12,3 +12,8 @@ venv/
 graphify-out/
 
 # Live demo recordings are generated locally or on the deployment host.
+
+# Internal working docs (planning, reviews, briefs) - kept locally, not published.
+/docs/
+/demo/README.md
+/agents/circularity/README.md

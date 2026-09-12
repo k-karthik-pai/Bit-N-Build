@@ -5,7 +5,7 @@ Responsibility: run one negotiation thread between a seller agent and one buyer
 agent — separate LLM contexts, each holding only its own private constraints —
 and return an accept/reject/counter outcome whose terms passed the validators.
 
-Architecture (NEXT_STEPS.md §1):
+Architecture (AGENTS.md §2):
 - LLM proposes moves via validated JSON (not native tool calling).
 - Validator checks every move (move-legal) and final acceptance (deal-legal).
 - Bounced moves return to author with reason; 2 invalid in a row or timeout
@@ -781,7 +781,7 @@ def _has_better_offer_claim(msg: str) -> bool:
 def _history_allowed_values(delivered_offers: Optional[List[Dict[str, Any]]]) -> List[float]:
     """Structured field values (price, quantity, contract_months) of every
     offer already delivered earlier in this thread, by either side — public
-    history a message may legitimately quote (R3-1; EVENTS.md "Numbers in
+    history a message may legitimately quote (R3-1; AGENTS.md §5 "Numbers in
     message", amended 2026-09-12). `delivered_offers` only ever holds
     delivered offers, so a bounced offer never counts, per the amendment."""
     values: List[float] = []
@@ -805,7 +805,7 @@ def _message_states_reservation(
 ) -> bool:
     """A number equal to `reservation_value` is a leak UNLESS that same value
     is also covered by `allowed_values` (the move's own structured fields
-    and/or public thread history) — R3-2, EVENTS.md "Own-reservation leak"
+    and/or public thread history) — R3-2, AGENTS.md §5 "Own-reservation leak"
     (amended 2026-09-12): coincidence with public history is not a leak."""
     if reservation_value is None or not msg:
         return False
@@ -825,7 +825,7 @@ def _message_numbers_match_structured(msg: str, allowed_values: List[float], eps
     contract_months) PLUS `_history_allowed_values()` of the thread so far
     (R3-1) — quoting a price/quantity/term from an offer already delivered
     earlier in this thread, by either side, is grounded in public history,
-    not invented (EVENTS.md "Numbers in message", amended 2026-09-12).
+    not invented (AGENTS.md §5 "Numbers in message", amended 2026-09-12).
     Checks both digit numbers and word numbers (twenty-nine -> 29). Isolated pronoun "one"
     is ignored so "the best one we can do" passes.
     """
@@ -864,7 +864,7 @@ def _validate_move_legal(
 
     `delivered_offers` is this thread's offers delivered so far (either side,
     from the caller's `delivered_offers` list) — used to allow a message to
-    quote public thread history (R3-1/R3-2, EVENTS.md amended 2026-09-12).
+    quote public thread history (R3-1/R3-2, AGENTS.md §5 amended 2026-09-12).
     """
     action = move.get("action")
     msg = move.get("message", "") if isinstance(move.get("message"), str) else ""
@@ -924,7 +924,7 @@ def _validate_move_legal(
             # side's already-delivered offers) are grounded, not invented —
             # compute before the leak check so R3-2 can exempt the same set.
             # R4-3: the thread's route freight is public to both sides too
-            # (EVENTS.md "Numbers in message", amended 2026-09-12) — add it.
+            # (AGENTS.md §5 "Numbers in message", amended 2026-09-12) — add it.
             allowed = [price, qty, float(months), float(logistics_cost)] + history_values
             # leak: seller must not state own floor or batna, UNLESS that same
             # number is covered by `allowed` above (R3-2).
@@ -964,7 +964,7 @@ def _validate_move_legal(
                         continue
                     for o in offers:
                         # only a live BUYER bid elsewhere counts as "a better offer" —
-                        # the seller's own asks in other threads never qualify (R2-2/EVENTS.md)
+                        # the seller's own asks in other threads never qualify (R2-2, AGENTS.md §2)
                         if o.get("_role") != "buyer_agent" or o.get("_thread_dead"):
                             continue
                         try:
@@ -1105,7 +1105,7 @@ def _validate_deal_legal(
         return False, "contract_months is outside the buyer's range"
     # message numbers must match the accepted offer's structured fields OR a
     # structured field of any offer already delivered earlier in this thread,
-    # by either side — R3-1, EVENTS.md "Numbers in message" amended
+    # by either side — R3-1, AGENTS.md §5 "Numbers in message" amended
     # 2026-09-12 ("We accept your $26.00/t -- down from the $28.50 you opened
     # at" quotes public history, not just the offer being accepted). R4-3:
     # the thread's route freight is public to both sides too — allowed here.
@@ -1369,7 +1369,7 @@ def _deterministic_fallback_offer(
             qty_val = qty
         # Preserve the original opening behavior when there is no previous
         # delivered seller offer. A held offer may equal the dynamic floor:
-        # its structured price makes that number legal under EVENTS.md.
+        # its structured price makes that number legal under AGENTS.md §5.
         if last_own is None and abs(price - floor) < 0.01:
             price = round(floor + 0.5, 2)
         msg = f"Holding at ${price:.2f}/t for {qty_str} t, {contract_months} months. (deterministic fallback)"
@@ -1451,7 +1451,7 @@ def _run_thread_negotiation(
     """
     Core loop for one buyer thread. Handles LLM proposals, validator bounces,
     retry cap, fallback, request_info, and deal_legal checks.
-    Emits events if emit provided (via EVENTS.md envelope, but this function
+    Emits events if emit provided (via AGENTS.md §5 envelope, but this function
     only returns the negotiate() dict; orchestrator wraps emit for envelope).
     """
     # validate inputs quickly (keep legacy checks)
@@ -1579,7 +1579,7 @@ def _run_thread_negotiation(
     # helper to emit via orchestrator envelope if provided, else just internal
     def _emit_thread_event(ev_type: str, from_agent: str, to_agent: str, payload: Dict[str, Any], validator_info: Optional[Dict[str, Any]], delivered: Optional[bool], model: Optional[str]):
         if emit is not None:
-            # emit expects EVENTS.md envelope fields? But for thread loop we just send minimal;
+            # emit expects AGENTS.md §5 envelope fields? But for thread loop we just send minimal;
             # orchestrator wraps. Here we send a simplified dict that orchestrator can convert.
             # For standalone thread without orchestrator envelope, we just store.
             emit({

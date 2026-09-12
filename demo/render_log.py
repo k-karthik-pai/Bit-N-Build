@@ -3,7 +3,7 @@ Demo Output — Contract frozen in AGENTS.md section 4 (consumes the
 orchestrator's final recommendation object + its additive pipeline_log).
 
 Renders the terminal-style run log + summary card described in
-docs/brief-demo.md. Every number printed here comes straight from
+README.md. Every number printed here comes straight from
 orchestrator.run_pipeline()'s output — nothing is hardcoded or re-derived.
 """
 
@@ -119,7 +119,7 @@ def show_progress(event: Dict[str, Any]) -> None:
 
 
 def format_event(event: Dict[str, Any]) -> str:
-    """One-line readable form for an EVENTS.md event — also used by Step 2 SSE."""
+    """One-line readable form for an AGENTS.md §5 event — also used by Step 2 SSE."""
     t = event.get("type")
     payload = event.get("payload", {})
     validator = event.get("validator")

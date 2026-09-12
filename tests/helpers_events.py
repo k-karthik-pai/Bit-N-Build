@@ -1,4 +1,4 @@
-"""Shared EVENTS.md validation helpers — reused by test_events_sample and test_negotiation_loop."""
+"""Shared AGENTS.md §5 validation helpers — reused by test_events_sample and test_negotiation_loop."""
 import re
 import unittest
 from datetime import datetime
@@ -40,7 +40,7 @@ def valid_agent(name, buyer_ids):
     return name.startswith("buyer_agent:") and name.split(":", 1)[1] in buyer_ids
 
 def assert_events_valid(testcase: unittest.TestCase, events: List[Dict[str, Any]], seller: Dict[str, Any], buyers: Dict[str, Dict[str, Any]], freight: float):
-    """Run all EVENTS.md checks on a list of events."""
+    """Run all AGENTS.md §5 checks on a list of events."""
     # envelope
     run_ids = {e["run_id"] for e in events}
     testcase.assertEqual(len(run_ids), 1)
@@ -108,7 +108,7 @@ def assert_events_valid(testcase: unittest.TestCase, events: List[Dict[str, Any]
 
     # messages only state structured numbers (own fields, OR a structured
     # field of an offer already delivered EARLIER in the same thread by
-    # either side — R3-1, EVENTS.md "Numbers in message" amended 2026-09-12 —
+    # either side — R3-1, AGENTS.md §5 "Numbers in message" amended 2026-09-12 —
     # OR the thread's route freight cost_per_tonne_usd, public to both sides
     # via the route/info_response events — R4-3, same section amended again
     # 2026-09-12) and hide own reservation UNLESS that number is covered by
@@ -130,7 +130,7 @@ def assert_events_valid(testcase: unittest.TestCase, events: List[Dict[str, Any]
         own_fields = {float(v) for v in (terms.get("price_per_tonne_usd"), terms.get("quantity_tonnes"), terms.get("contract_months")) if v is not None}
         # R4-3: the thread's route freight cost_per_tonne_usd is public to both
         # sides (route / info_response) — allowed in message numbers too
-        # (EVENTS.md "Numbers in message", amended 2026-09-12).
+        # (AGENTS.md §5 "Numbers in message", amended 2026-09-12).
         allowed = own_fields | {float(freight)} | history_by_deal.get(deal, set())
         said = numbers_in(p["message"])
         testcase.assertLessEqual(said, allowed, f"seq {e['seq']} numbers {said} not subset of {allowed}")

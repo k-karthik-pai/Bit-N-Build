@@ -1,7 +1,7 @@
-"""Checks demo/sample_run.jsonl against the frozen event schema in docs/EVENTS.md.
+"""Checks demo/sample_run.jsonl against the frozen event schema in AGENTS.md §5.
 
 The same checks are meant to run on real recorded runs (runs/*.jsonl) once the
-negotiation runtime exists, so the rules here mirror EVENTS.md, not the sample.
+negotiation runtime exists, so the rules here mirror AGENTS.md §5, not the sample.
 """
 import json
 import re

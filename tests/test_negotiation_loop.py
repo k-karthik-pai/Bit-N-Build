@@ -61,6 +61,11 @@ class NegotiationLoopTests(unittest.TestCase):
         self._patch_env = patch.dict("os.environ", env_overrides, clear=False)
         self._patch_env.start()
         self.addCleanup(self._patch_env.stop)
+        # A developer's .env (loaded at import) also carries timeout and pacing
+        # settings; tests assert the built-in defaults, so drop them here.
+        # patch.dict restores the full original environment on stop.
+        for name in [n for n in os.environ if n.endswith(("_TIMEOUT_S", "_RPM", "_RPD"))]:
+            del os.environ[name]
         # Loud tripwire: if any code path still tries to reach a provider
         # despite the blanked env/chains above, fail immediately instead of
         # silently making a real network call.
@@ -326,7 +331,7 @@ class NegotiationLoopTests(unittest.TestCase):
 
     def test_leverage_better_offer_claim_ignores_sellers_own_asks_elsewhere(self):
         # a seller ask in another thread must never justify "we have a better
-        # offer elsewhere" — EVENTS.md requires a live BUYER bid (R2-2 blind spot
+        # offer elsewhere" — AGENTS.md §5 requires a live BUYER bid (R2-2 blind spot
         # in the leverage check, not just _dynamic_floor).
         shared = {
             "other_buyer": [

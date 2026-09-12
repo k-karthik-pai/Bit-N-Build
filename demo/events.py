@@ -1,4 +1,4 @@
-"""Validation helpers for the frozen event contract in docs/EVENTS.md."""
+"""Validation helpers for the frozen event contract in AGENTS.md §5."""
 
 from __future__ import annotations
 
