@@ -116,8 +116,10 @@ def _deterministic_transcript(
     status: str,
     margin: Optional[float],
     buyer_id: str,
+    batna_note: Optional[str] = None,
 ) -> List[Dict[str, str]]:
     """Fallback when no LLM key is configured.  Messages are bounded by real limits."""
+    batna_suffix = f" {batna_note}" if batna_note else ""
     if status == "rejected":
         return [
             {
@@ -126,7 +128,7 @@ def _deterministic_transcript(
                     f"Seller opening: we can supply LD slag at ${seller_preferred:.2f}/t "
                     f"(minimum acceptable ${seller_min:.2f}/t, quantity {quantity}t, "
                     f"logistics ~${logistics_cost:.2f}/t). Margin at preferred would be "
-                    f"${compute_margin_per_tonne(seller_preferred, logistics_cost):.2f}/t."
+                    f"${compute_margin_per_tonne(seller_preferred, logistics_cost):.2f}/t.{batna_suffix}"
                 ),
             },
             {
@@ -154,7 +156,7 @@ def _deterministic_transcript(
                 "message": (
                     f"Seller opening: offering LD slag at ${seller_preferred:.2f}/t "
                     f"(floor ${seller_min:.2f}/t). Quantity {quantity}t, logistics "
-                    f"${logistics_cost:.2f}/t."
+                    f"${logistics_cost:.2f}/t.{batna_suffix}"
                 ),
             },
             {
@@ -189,7 +191,7 @@ def _deterministic_transcript(
             "message": (
                 f"Seller opening: LD slag available, ${seller_preferred:.2f}/t preferred "
                 f"(floor ${seller_min:.2f}/t), logistics ${logistics_cost:.2f}/t, "
-                f"quantity {quantity}t."
+                f"quantity {quantity}t.{batna_suffix}"
             ),
         },
         {
@@ -247,6 +249,7 @@ def _try_llm_transcript(
     quantity: int,
     status: str,
     margin: Optional[float],
+    batna_note: Optional[str] = None,
 ) -> Optional[List[Dict[str, str]]]:
     """
     Attempt LLM generation.  Returns None on any failure so caller can fall back
@@ -263,6 +266,8 @@ def _try_llm_transcript(
 
         client = OpenAI(**client_kwargs)
 
+        batna_instruction = f" {batna_note}" if batna_note else ""
+
         # We constrain the LLM with the already-validated numeric proposal.
         # It only writes the dialogue, not the price decision.
         if status == "rejected":
@@ -270,7 +275,7 @@ def _try_llm_transcript(
                 f"Write a 3-turn negotiation transcript that ends in rejection. "
                 f"Seller floor ${seller_min:.2f}/t, preferred ${seller_preferred:.2f}/t; "
                 f"buyer {buyer_id} ceiling ${buyer_max:.2f}/t. No overlap. "
-                f"Quantity {quantity}t. Be concise, professional."
+                f"Quantity {quantity}t. Be concise, professional.{batna_instruction}"
             )
         elif status == "countered":
             instruction = (
@@ -280,6 +285,7 @@ def _try_llm_transcript(
                 f"Agreed counter price is ${price:.2f}/t, margin ${margin:.2f}/t, "
                 f"quantity {quantity}t, logistics ${logistics_cost:.2f}/t. "
                 f"Show the seller lowering expectations to meet the buyer at the validated price."
+                f"{batna_instruction}"
             )
         else:
             instruction = (
@@ -288,7 +294,7 @@ def _try_llm_transcript(
                 f"buyer {buyer_id} ceiling ${buyer_max:.2f}/t. "
                 f"Final validated price ${price:.2f}/t, margin ${margin:.2f}/t, "
                 f"quantity {quantity}t, logistics ${logistics_cost:.2f}/t, "
-                f"term {CONTRACT_TERM_MONTHS} months."
+                f"term {CONTRACT_TERM_MONTHS} months.{batna_instruction}"
             )
 
         resp = client.chat.completions.create(
@@ -355,6 +361,7 @@ def generate_transcript(
     status: str,
     margin: Optional[float],
     use_llm: bool = True,
+    batna_note: Optional[str] = None,
 ) -> List[Dict[str, str]]:
     """
     LLM generates negotiation proposals/messages (transcript field).
@@ -371,6 +378,7 @@ def generate_transcript(
             quantity=quantity,
             status=status,
             margin=margin,
+            batna_note=batna_note,
         )
         if llm_result is not None:
             return llm_result
@@ -385,6 +393,7 @@ def generate_transcript(
         status=status,
         margin=margin,
         buyer_id=buyer_id,
+        batna_note=batna_note,
     )
 
 
@@ -399,6 +408,7 @@ def negotiate(
     handling_cost_per_tonne_usd: float = DEFAULT_HANDLING_COST_PER_TONNE_USD,
     processing_cost_per_tonne_usd: float = DEFAULT_PROCESSING_COST_PER_TONNE_USD,
     use_llm: bool = True,
+    batna_price_per_tonne_usd: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Negotiate a deal between seller and buyer.
@@ -407,6 +417,14 @@ def negotiate(
       seller_constraints: {min_acceptable_price_per_tonne_usd, preferred_price_per_tonne_usd, available_quantity_tonnes}
       buyer: {buyer_id, max_acceptable_price_per_tonne_usd, annual_demand_tonnes}
       logistics_cost_per_tonne_usd: float (hardcoded $8/t placeholder until Logistics Optimizer ready)
+
+    batna_price_per_tonne_usd (additive, not in the frozen AGENTS.md shape):
+    the seller's best walk-away alternative — the price this buyer would need
+    to match to be worth as much as the seller's next-best option elsewhere.
+    When set, the effective floor becomes max(min_acceptable_price, this
+    value): a real BATNA (best alternative to a negotiated agreement), not
+    just a second hardcoded minimum. Omit for plain single-buyer negotiation;
+    default behavior is unchanged.
 
     Output shape:
       {status, price_per_tonne_usd, quantity_tonnes, contract_term_months, transcript}
@@ -436,22 +454,37 @@ def negotiate(
 
     quantity = int(min(available, demand)) if demand > 0 and available > 0 else 0
 
+    # ---- BATNA: the seller never accepts less than its best walk-away
+    # alternative. effective_seller_min is what every downstream check uses
+    # in place of the raw floor. ----
+    batna_binding = batna_price_per_tonne_usd is not None and batna_price_per_tonne_usd > seller_min
+    effective_seller_min = (
+        max(seller_min, batna_price_per_tonne_usd) if batna_price_per_tonne_usd is not None else seller_min
+    )
+    batna_note = (
+        f"(We have a walk-away alternative worth ${batna_price_per_tonne_usd:.2f}/t elsewhere — "
+        f"won't go below that.)"
+        if batna_binding
+        else None
+    )
+
     # ---- No-overlap check ----
-    if seller_min > buyer_max:
+    if effective_seller_min > buyer_max:
         status = "rejected"
         price: Optional[float] = None
         margin: Optional[float] = None
         transcript = generate_transcript(
-            seller_min=seller_min,
+            seller_min=effective_seller_min,
             seller_preferred=seller_preferred,
             buyer_max=buyer_max,
             buyer_id=buyer_id,
             logistics_cost=logistics_cost,
-            price=seller_min,  # for transcript context even though rejected
+            price=effective_seller_min,  # for transcript context even though rejected
             quantity=quantity,
             status=status,
             margin=margin,
             use_llm=use_llm,
+            batna_note=batna_note,
         )
         return {
             "status": status,
@@ -464,26 +497,32 @@ def negotiate(
             "logistics_cost_per_tonne_usd": logistics_cost,
             "handling_cost_per_tonne_usd": handling_cost,
             "processing_cost_per_tonne_usd": processing_cost,
-            "validator_reason": f"no overlap: seller_min {seller_min} > buyer_max {buyer_max}",
+            "batna_price_per_tonne_usd": batna_price_per_tonne_usd,
+            "validator_reason": (
+                f"no overlap: effective floor {effective_seller_min} "
+                f"({'BATNA-adjusted, ' if batna_binding else ''}seller_min {seller_min}) > buyer_max {buyer_max}"
+            ),
         }
 
     # ---- Determine numeric proposal (deterministic) ----
-    # If seller preferred is within buyer ceiling, seller gets preferred.
-    # Otherwise compromise toward the feasible range.
-    if seller_preferred <= buyer_max:
+    # If seller preferred already clears the effective floor and fits the
+    # buyer's ceiling, use it as-is. Otherwise compromise toward the feasible
+    # range, bounded below by the effective floor (which BATNA may have
+    # raised above the plain seller_min).
+    if effective_seller_min <= seller_preferred <= buyer_max:
         proposed_price = seller_preferred
     else:
-        # Compromise: midpoint between floor and ceiling, rounded to cents
-        proposed_price = round((seller_min + buyer_max) / 2.0, 2)
+        # Compromise: midpoint between the effective floor and ceiling, rounded to cents
+        proposed_price = round((effective_seller_min + buyer_max) / 2.0, 2)
 
     proposed_price = round(float(proposed_price), 2)
 
     # ---- Validator gates `accepted` ----
-    is_valid, reason = validate_proposal(proposed_price, seller_min, buyer_max)
+    is_valid, reason = validate_proposal(proposed_price, effective_seller_min, buyer_max)
     if not is_valid:
         # Should not happen due to branching above, but guard anyway
         transcript = generate_transcript(
-            seller_min=seller_min,
+            seller_min=effective_seller_min,
             seller_preferred=seller_preferred,
             buyer_max=buyer_max,
             buyer_id=buyer_id,
@@ -493,6 +532,7 @@ def negotiate(
             status="rejected",
             margin=None,
             use_llm=use_llm,
+            batna_note=batna_note,
         )
         return {
             "status": "rejected",
@@ -504,6 +544,7 @@ def negotiate(
             "logistics_cost_per_tonne_usd": logistics_cost,
             "handling_cost_per_tonne_usd": handling_cost,
             "processing_cost_per_tonne_usd": processing_cost,
+            "batna_price_per_tonne_usd": batna_price_per_tonne_usd,
             "validator_reason": reason,
         }
 
@@ -513,11 +554,11 @@ def negotiate(
 
     # ---- Status decision: accepted vs countered ----
     # Countered signals a feasible but tight deal needing further confirmation:
-    #   - seller had to compromise below preferred, OR
+    #   - seller had to compromise below preferred (incl. because BATNA raised the floor), OR
     #   - spread is very narrow (< $2/t), OR
     #   - margin is thin (< $2/t)
-    overlap = buyer_max - seller_min
-    had_to_compromise = seller_preferred > buyer_max
+    overlap = buyer_max - effective_seller_min
+    had_to_compromise = seller_preferred > buyer_max or seller_preferred < effective_seller_min
     thin_spread = overlap < 2.0
     thin_margin = margin < 2.0
 
@@ -528,7 +569,7 @@ def negotiate(
         status = "accepted"
 
     transcript = generate_transcript(
-        seller_min=seller_min,
+        seller_min=effective_seller_min,
         seller_preferred=seller_preferred,
         buyer_max=buyer_max,
         buyer_id=buyer_id,
@@ -538,6 +579,7 @@ def negotiate(
         status=status,
         margin=margin,
         use_llm=use_llm,
+        batna_note=batna_note,
     )
 
     # Final validator check before returning accepted/countered — never leak out-of-bounds.
@@ -555,7 +597,7 @@ def negotiate(
         # Zero-tonne deals are not meaningful accepts/counters — reject instead.
         status = "rejected"
         transcript = generate_transcript(
-            seller_min=seller_min,
+            seller_min=effective_seller_min,
             seller_preferred=seller_preferred,
             buyer_max=buyer_max,
             buyer_id=buyer_id,
@@ -565,6 +607,7 @@ def negotiate(
             status="rejected",
             margin=margin,
             use_llm=use_llm,
+            batna_note=batna_note,
         )
         return {
             "status": status,
@@ -576,6 +619,7 @@ def negotiate(
             "logistics_cost_per_tonne_usd": logistics_cost,
             "handling_cost_per_tonne_usd": handling_cost,
             "processing_cost_per_tonne_usd": processing_cost,
+            "batna_price_per_tonne_usd": batna_price_per_tonne_usd,
             "validator_reason": "quantity is zero: no viable deal (available or demand is 0)",
         }
 
@@ -589,6 +633,7 @@ def negotiate(
         "logistics_cost_per_tonne_usd": logistics_cost,
         "handling_cost_per_tonne_usd": handling_cost,
         "processing_cost_per_tonne_usd": processing_cost,
+        "batna_price_per_tonne_usd": batna_price_per_tonne_usd,
         "validator_reason": reason,
     }
 
