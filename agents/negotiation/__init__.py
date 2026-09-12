@@ -23,6 +23,13 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
+try:
+    from dotenv import load_dotenv  # type: ignore
+
+    load_dotenv()
+except ImportError:
+    pass
+
 # ---------------------------------------------------------------------------
 # Hardcoded placeholder — swap with Logistics Optimizer output when ready
 # ---------------------------------------------------------------------------
@@ -211,6 +218,24 @@ def _deterministic_transcript(
     ]
 
 
+def _resolve_llm_config() -> Optional[Tuple[Dict[str, Any], str]]:
+    """
+    Returns (openai_client_kwargs, model) for whichever provider is configured
+    via env vars, or None if none is set. OpenRouter takes priority since it's
+    the one used for free-tier testing; falls back to direct OpenAI.
+    """
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    if openrouter_key:
+        return (
+            {"api_key": openrouter_key, "base_url": "https://openrouter.ai/api/v1"},
+            os.getenv("NEGOTIATION_LLM_MODEL", "nex-agi/nex-n2.5-mini:free"),
+        )
+    api_key = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY")
+    if api_key:
+        return {"api_key": api_key}, os.getenv("NEGOTIATION_LLM_MODEL", "gpt-4o-mini")
+    return None
+
+
 def _try_llm_transcript(
     *,
     seller_min: float,
@@ -228,15 +253,15 @@ def _try_llm_transcript(
     to deterministic transcript.  The LLM is NEVER allowed to set price outside
     bounds — price is injected from the deterministic engine.
     """
-    api_key = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY")
-    if not api_key:
+    config = _resolve_llm_config()
+    if config is None:
         return None
+    client_kwargs, model = config
     try:
         # Lazy import so module works without openai installed
         from openai import OpenAI  # type: ignore
 
-        client = OpenAI(api_key=api_key)
-        model = os.getenv("NEGOTIATION_LLM_MODEL", "gpt-4o-mini")
+        client = OpenAI(**client_kwargs)
 
         # We constrain the LLM with the already-validated numeric proposal.
         # It only writes the dialogue, not the price decision.
@@ -269,7 +294,7 @@ def _try_llm_transcript(
         resp = client.chat.completions.create(
             model=model,
             temperature=0.7,
-            max_tokens=600,
+            max_tokens=1200,
             messages=[
                 {
                     "role": "system",
