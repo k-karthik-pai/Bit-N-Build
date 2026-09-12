@@ -23,10 +23,9 @@ sample event file, not against finished negotiation code.
 | Provider/model assignment per agent role, with fallback chains and pacing | `.env.example`, "Model and provider" below |
 | Supply decision: one deal closes per run; other agreed threads are released | `docs/AGENTS.md` §2, `docs/LIMITATIONS.md` |
 
-**Still to verify by hand (needs your keys):** OpenRouter's account-level free quota
-(`curl -s https://openrouter.ai/api/v1/key -H "Authorization: Bearer $OPENROUTER_API_KEY"`)
-and Gemini's current per-model limits in AI Studio. Fill `*_RPM` in `.env` from those
-numbers, not from memory.
+**Verified:** OpenRouter free limits (see "Model and provider" below).
+**Still to verify by hand:** Gemini's current per-model limits in AI Studio — fill
+`GEMINI_RPM` in `.env` from that page, not from memory.
 
 ---
 
@@ -120,10 +119,13 @@ that isn't in the result.
 - **Seller on the biggest pool.** The seller speaks in every thread — with 3 buyers it
   makes about as many calls as all buyers combined (~19 of ~36 calls in a 6-round run).
   Never split it across pools.
-- **Two OpenRouter free models probably don't double the quota** — free-tier caps are
-  (as far as we know) account-level, shared across all `:free` models. Verify with the
-  `/api/v1/key` call above. If the cap is low, a one-time OpenRouter credit top-up
-  (which raises free-model daily limits) is the cheapest reliability fix.
+- **Two OpenRouter free models do NOT double the quota** — confirmed 2026-09-12
+  (openrouter.ai/docs/api-reference/limits): free-model limits are account-wide across
+  all models and keys — 20 req/min, and 50 req/day for accounts with under $10 of credits
+  ever purchased (1000 req/day after $10). Our account is on the 50/day tier
+  (`is_free_tier: true`). Buyers use ~17 OpenRouter calls per run → only 2–3 runs/day,
+  not enough for rehearsal plus the ~10-run acceptance check. **Action: one-time $10
+  OpenRouter credit purchase** → 1000/day (~55 runs/day).
 - **Per-minute limits matter more than daily ones** with concurrent threads: pace calls
   per provider (`*_RPM` in `.env`) and stagger thread starts.
 - **Moves are validated JSON, not native tool calling** — free models vary widely in
