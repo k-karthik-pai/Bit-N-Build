@@ -5,3 +5,6 @@ __pycache__/
 venv/
 *.egg-info/
 .DS_Store
+
+# graphify code graph (generated locally; regenerate with `graphify update .`)
+graphify-out/
