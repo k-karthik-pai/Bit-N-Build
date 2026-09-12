@@ -27,6 +27,8 @@ message and a nonzero exit code instead of a success card.
    value from the card. A recommendation marked COUNTERED still needs confirmation.
 4. Describe CO2 avoided explicitly as an estimate, not a measured saving.
 
+Before presenting, run the command once from the same terminal you will use for judging and confirm that live steps and the final card are both visible.
+
 ## Judge questions
 
 **How does the negotiation agent decide the price?**
