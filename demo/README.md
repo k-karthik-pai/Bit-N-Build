@@ -1,5 +1,40 @@
 # Demo Output
 
+## Live dashboard
+
+Install dependencies and start the presentation-safe replay from the repository root:
+
+```sh
+pip install -r requirements.txt
+python -m demo.web --replay demo/sample_run.jsonl
+```
+
+Open `http://127.0.0.1:8000`. The page shows ranked buyers, independent negotiation
+threads, validator bounces, private rationale, price convergence, route updates, and
+the final recommendation. Every streamed event is validated against `docs/EVENTS.md`
+and recorded to the gitignored `runs/` directory.
+
+For normal startup, use `python -m demo.web`. Replay can then be started from the UI.
+Host, port, recording directory, replay speed, and logging can be configured with
+`HOST`, `PORT`, `RUNS_DIR`, `DEFAULT_REPLAY_SPEED`, and `LOG_LEVEL`.
+
+The included `render.yaml` deploys the same FastAPI application to Render. Secrets are
+configured in Render rather than committed. Render's default filesystem is ephemeral;
+for persistent recordings, attach `/var/data` and set `RUNS_DIR=/var/data/runs`.
+
+Live mode calls the asynchronous integration contract below and does not duplicate
+orchestrator logic in the API layer:
+
+```python
+async def run_multi_agent(*, run_id: str, top_n: int, emit: Callable[[dict], None]) -> dict:
+    ...
+```
+
+Until the multi-agent negotiation track exports that function, live mode terminates
+with an explicit `run_failed` event and the sample replay remains fully operational.
+
+## Terminal output
+
 From the repository root, run:
 
 ```sh
