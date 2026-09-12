@@ -8,6 +8,13 @@ from .agent import (
     run_circularity,
     run_from_files,
 )
+from .knowledge_graph import (
+    GraphEdge,
+    GraphNode,
+    MaterialBuyerGraph,
+    MaterialBuyerPath,
+    build_material_buyer_graph,
+)
 
 __all__ = [
     "CircularityError",
@@ -16,4 +23,9 @@ __all__ = [
     "find_candidates",
     "run_circularity",
     "run_from_files",
+    "GraphEdge",
+    "GraphNode",
+    "MaterialBuyerGraph",
+    "MaterialBuyerPath",
+    "build_material_buyer_graph",
 ]

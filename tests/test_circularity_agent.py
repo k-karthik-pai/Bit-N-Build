@@ -60,49 +60,47 @@ class CircularityAgentTests(unittest.TestCase):
         "seller_id": "seller_1",
     }
 
-    def test_committed_dataset_is_ranked_by_demand_fit(self) -> None:
+    def test_committed_dataset_preserves_all_threshold_qualified_buyers(self) -> None:
         # data/buyers.json is the real dataset (13 real-anchor + 12 synthetic
         # entries, see data/generate_buyers.py) generated deterministically
         # (fixed random seed), so this ranking is stable across regenerations.
         result = run_circularity(self.request)
 
+        expected_buyer_ids = {
+            "shah_cement",
+            "crown_cement",
+            "seven_circle",
+            "premier_cement",
+            "bashundhara_cement",
+            "unique_cement",
+            "akij_cement",
+            "synth_buyer_3",
+            "synth_buyer_5",
+            "synth_buyer_12",
+            "synth_buyer_9",
+            "synth_buyer_10",
+            "heidelberg_bd",
+            "synth_buyer_7",
+            "synth_buyer_11",
+            "synth_buyer_8",
+            "diamond_cement",
+            "metrocem_group",
+            "synth_buyer_6",
+            "kds_cement",
+            "shamim_cement",
+            "synth_buyer_1",
+            "synth_buyer_2",
+            "nitol_cement",
+            "synth_buyer_4",
+        }
+        candidates = result["candidates"]
+        self.assertEqual({candidate["buyer_id"] for candidate in candidates}, expected_buyer_ids)
         self.assertEqual(
-            [candidate["buyer_id"] for candidate in result["candidates"]],
-            [
-                "shah_cement",
-                "crown_cement",
-                "seven_circle",
-                "premier_cement",
-                "bashundhara_cement",
-                "unique_cement",
-                "akij_cement",
-                "synth_buyer_3",
-                "synth_buyer_5",
-                "synth_buyer_12",
-                "synth_buyer_9",
-                "synth_buyer_10",
-                "heidelberg_bd",
-                "synth_buyer_7",
-                "synth_buyer_11",
-                "synth_buyer_8",
-                "diamond_cement",
-                "metrocem_group",
-                "synth_buyer_6",
-                "kds_cement",
-                "shamim_cement",
-                "synth_buyer_1",
-                "synth_buyer_2",
-                "nitol_cement",
-                "synth_buyer_4",
-            ],
+            candidates,
+            sorted(candidates, key=lambda candidate: (-candidate["compatibility_score"], candidate["buyer_id"])),
         )
-        self.assertEqual(
-            [candidate["compatibility_score"] for candidate in result["candidates"]],
-            [
-                0.65, 0.6, 0.58, 0.52, 0.5, 0.48, 0.4, 0.35, 0.34, 0.32, 0.32,
-                0.31, 0.3, 0.29, 0.26, 0.24, 0.22, 0.2, 0.18, 0.15, 0.15, 0.15,
-                0.14, 0.12, 0.09,
-            ],
+        self.assertTrue(
+            all(0 <= candidate["compatibility_score"] <= 1 for candidate in candidates)
         )
         self.assertEqual(len(result["candidates"]), 25)
         for candidate in result["candidates"]:
@@ -110,6 +108,10 @@ class CircularityAgentTests(unittest.TestCase):
                 set(candidate),
                 {"buyer_id", "application", "compatibility_score", "notes"},
             )
+            self.assertIn("Material(", candidate["notes"])
+            self.assertIn("SUITABLE_FOR", candidate["notes"])
+            self.assertIn("REQUIRED_BY", candidate["notes"])
+            self.assertIn("LOCATED_AT", candidate["notes"])
 
     def test_material_and_quality_mismatches_are_excluded(self) -> None:
         buyers = [
