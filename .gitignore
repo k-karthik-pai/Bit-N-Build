@@ -9,3 +9,6 @@ venv/
 
 # graphify code graph (generated locally; regenerate with `graphify update .`)
 graphify-out/
+
+# Live demo recordings (generated locally or on the deployment host)
+runs/

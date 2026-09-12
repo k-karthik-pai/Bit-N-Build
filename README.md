@@ -6,10 +6,18 @@ validating negotiations, and selecting the highest total-value candidate deal.
 From the repository root:
 
 ```sh
+pip install -r requirements.txt
+python -m demo.web --replay demo/sample_run.jsonl
 python -m demo.render_log
 python -m orchestrator.run
 python -m unittest discover -s tests -v
 ```
+
+Open `http://127.0.0.1:8000` for the live dashboard. Replay mode is the
+deterministic, presentation-safe path. The **Start live run** control uses the
+frozen `orchestrator.run_multi_agent(run_id=..., top_n=..., emit=...)` integration
+point once the multi-agent negotiation track supplies it; until then it returns a
+visible `run_failed` event instead of simulating LLM activity.
 
 The default demo is offline. Optional negotiation dialogue requires
 `pip install -r requirements.txt` and `OPENROUTER_API_KEY` in your environment
