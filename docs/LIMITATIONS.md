@@ -25,6 +25,11 @@ no shipment is booked, and an accepted simulation outcome is not a signed contra
 - BATNA compares modeled alternative margins per tonne. Final selection compares
   total values among the resulting eligible offers. This is not a global multi-buyer
   allocation optimizer; pending counteroffers can still be recommended.
-- Optional LLM dialogue is wording only. Numeric placeholders are validated before
-  local substitution; prose is not a contractual commitment. Provider failures fall
-  back to deterministic dialogue. Live provider availability is an external dependency.
+- LLM agents propose moves as validated JSON; a deterministic validator gates every
+  `make_offer` (move-legal: own floor/ceiling, quantity, contract months) and final
+  `accept_offer` (deal-legal: both sides' bounds, latest counterparty offer). Messages
+  stating own reservation (floor/ceiling/BATNA), numbers not matching structured fields,
+  or false seller leverage claims are bounced for retry (2 bounces → deterministic
+  fallback, visible `fallback` event; per-call 20 s timeout also falls back). The
+  deterministic engine remains the offline test path and fallback. Live provider
+  availability is an external dependency; recorded replay is the demo safety net.

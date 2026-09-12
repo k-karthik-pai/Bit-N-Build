@@ -75,8 +75,16 @@ real data files.
 - **Rounds.** A round is one delivered move by one agent. `info_request`/`info_response`
   and bounced moves share the round number of the move they precede. Max 6 rounds; at the
   limit the best open counter becomes `countered`.
-- **Numbers in `message`** must match the move's own structured fields (price, quantity,
-  contract months). Anything else is a bounced move.
+- **Numbers in `message`** must match either the move's own structured fields (price,
+  quantity, contract months) or a structured field of an offer already **delivered earlier
+  in the same thread** by either side (so "you offered $24.50" is fine). Anything else is a
+  bounced move. *(Amended 2026-09-12, team-approved: quoting public history is grounded, not
+  invented.)* Also allowed: the thread's route freight `cost_per_tonne_usd` from the
+  logistics agent's `route` / `info_response` data — it is public to both sides.
+  *(Amended 2026-09-12, team-approved.)*
+- **Own-reservation leak** is checked only against numbers **not** covered by the rule
+  above — a number equal to the move's own terms or to public thread history is never a
+  leak, even if it coincides with the agent's floor/ceiling.
 - **Leverage claims** by the seller: "other interest" needs at least one other live thread;
   "a better offer" needs a live buyer offer elsewhere with higher total net value. Checked
   against actual thread state at that moment.

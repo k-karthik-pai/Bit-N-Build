@@ -70,10 +70,13 @@ so the protocol doesn't depend on it).
 - **deal-legal** — checked at `accept_offer(offer_id)`: the referenced offer is the latest
   open offer from the counterparty, and it satisfies both sides' bounds.
 
-Also bounced as invalid moves: a `message` stating the agent's own reservation value
-(floor / ceiling / BATNA); any number in `message` that doesn't match the move's
-structured fields; a seller leverage claim ("we have a better offer") with no qualifying
-live offer in another thread.
+Also bounced as invalid moves: any number in `message` that is neither one of the move's
+own structured fields nor a structured field of an offer already delivered in the same
+thread (amended 2026-09-12 — quoting the counterparty's earlier offer is allowed), or the
+thread's public route freight cost per tonne (amended 2026-09-12); a
+`message` stating the agent's own reservation value (floor / ceiling / BATNA) as a number
+not covered by the previous rule; a seller leverage claim ("we have a better offer") with
+no qualifying live offer in another thread.
 
 ### Limits
 Max 6 rounds per thread → best open counter becomes `countered`. Two invalid moves in a

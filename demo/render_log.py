@@ -118,15 +118,69 @@ def show_progress(event: Dict[str, Any]) -> None:
     print(line, flush=True)
 
 
-def main() -> int:
+def format_event(event: Dict[str, Any]) -> str:
+    """One-line readable form for an EVENTS.md event — also used by Step 2 SSE."""
+    t = event.get("type")
+    payload = event.get("payload", {})
+    validator = event.get("validator")
+    model = event.get("model") or "deterministic"
+    if t == "offer":
+        badge = "✓" if validator and validator.get("ok") else "✗"
+        price = payload.get("price_per_tonne_usd")
+        qty = payload.get("quantity_tonnes")
+        months = payload.get("contract_months")
+        oid = payload.get("offer_id") or "bounced"
+        msg = payload.get("message", "")[:80]
+        return f"[{badge}] {event['from_agent']} → {event['to_agent']} offer {oid} ${price}/t {qty}t {months}m \"{msg}\" [{model}]"
+    if t == "accept":
+        badge = "✓" if validator and validator.get("ok") else "✗"
+        return f"[{badge}] {event['from_agent']} → {event['to_agent']} accept {payload.get('offer_id')} \"{payload.get('message','')[:60]}\" [{model}]"
+    if t == "reject":
+        return f"[x] {event['from_agent']} → {event['to_agent']} reject \"{payload.get('message','')[:60]}\" reason:{payload.get('reason','')}"
+    if t == "info_request":
+        return f"[...] {event['from_agent']} → {event['to_agent']} info_request {payload.get('topic')}"
+    if t == "info_response":
+        return f"[...] {event['from_agent']} → {event['to_agent']} info_response {payload.get('topic')}: {payload.get('data')}"
+    if t == "fallback":
+        return f"[!] fallback {payload.get('agent')} cause={payload.get('cause')} {payload.get('detail','')[:60]}"
+    if t == "thread_started":
+        return f"[...] thread {payload.get('buyer_id')} seller:{payload.get('seller_model')} buyer:{payload.get('buyer_model')}"
+    if t in ("run_started","match","route","thread_result","released","deal_closed","recommendation","run_completed","run_failed"):
+        return f"[{t}] {payload}"
+    return f"[{t}] {event}"
+
+
+def main(argv=None) -> int:
+    import argparse
     from orchestrator import run_pipeline
 
+    parser = argparse.ArgumentParser(description="Render demo recommendation")
+    parser.add_argument("--live", action="store_true", help="Run live LLM negotiations with streaming events (requires API keys)")
+    parser.add_argument("--top-n", type=int, default=3, help="Number of concurrent buyers (3-5)")
+    if argv is None:
+        args, _ = parser.parse_known_args()
+    else:
+        args, _ = parser.parse_known_args(argv)
+
     try:
-        output = render(run_pipeline(on_progress=show_progress), include_log=False)
+        if args.live:
+            top_n = max(3, min(5, args.top_n))
+            events = []
+            def emit(ev):
+                events.append(ev)
+                line = format_event(ev)
+                if line:
+                    print(line, flush=True)
+            # also show legacy progress for compatibility
+            result = run_pipeline(use_llm=True, top_n=top_n, emit_event=emit, on_progress=show_progress)
+            print("\n" + render(result, include_log=False))
+            print(f"\nRecorded {len(events)} events to runs/<run_id>.jsonl", file=sys.stderr)
+        else:
+            output = render(run_pipeline(on_progress=show_progress), include_log=False)
+            print(output)
     except (ValueError, KeyError, TypeError, OSError) as exc:
         print(f"Demo could not produce a recommendation: {exc}", file=sys.stderr)
         return 1
-    print(output)
     return 0
 
 

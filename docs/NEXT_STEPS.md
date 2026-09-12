@@ -52,8 +52,10 @@ rejected ones bounce back to the LLM with the reason for a re-proposal.
 - **Leverage claims are validated.** If the seller says "we have a better offer," the
   validator checks that such an offer actually exists in another live thread; a false
   claim is bounced like any other invalid move.
-- The seller's hard floor stays deterministic: `max(seller_min, best live competing net
-  value converted to $/t for this buyer's route)`. The LLM defends it; it never sets it.
+- The seller's hard floor stays deterministic: `max(seller_min, best live competing
+  **buyer bid** — net value converted to $/t for this buyer's route)`. Only offers made
+  by buyer agents in other live (not rejected/released) threads count; the seller's own
+  asks never raise its floor. The LLM defends it; it never sets it.
 - **Logistics is consulted as an agent.** `request_info("route_cost", port)` goes to the
   Logistics Optimizer and appears in the feed as a `logistics_agent` message, not a hidden
   function call. (The optimizer itself stays deterministic — it answers, it doesn't negotiate.)
@@ -110,24 +112,28 @@ a **deal-desk LLM step** writes the "why this buyer won" explanation, grounded o
 computed numbers — run the same number-extraction check on it so it can't cite a figure
 that isn't in the result.
 
-### Model and provider (decided in Step 0)
-- **Mixed providers, one per agent role** — a Gemini free-tier key plus OpenRouter free
-  models, configured as per-role chains in `.env.example`. Gemini is a separate quota pool,
-  so it adds real headroom; its OpenAI-compatible endpoint means the existing `openai`
-  client works with a different `base_url`. The vendor mix is also a demo asset: each chat
-  bubble is badged with the model that produced it.
-- **Seller on the biggest pool.** The seller speaks in every thread — with 3 buyers it
-  makes about as many calls as all buyers combined (~19 of ~36 calls in a 6-round run).
-  Never split it across pools.
-- **Two OpenRouter free models do NOT double the quota** — confirmed 2026-09-12
-  (openrouter.ai/docs/api-reference/limits): free-model limits are account-wide across
-  all models and keys — 20 req/min, and 50 req/day for accounts with under $10 of credits
-  ever purchased (1000 req/day after $10). Our account is on the 50/day tier
-  (`is_free_tier: true`). Buyers use ~17 OpenRouter calls per run → only 2–3 runs/day,
-  not enough for rehearsal plus the ~10-run acceptance check. **Action: one-time $10
-  OpenRouter credit purchase** → 1000/day (~55 runs/day).
+### Model and provider (decided in Step 0, revised Round 3)
+- **Gemini + NVIDIA only, three keys each (as provider aliases) — OpenRouter dropped.**
+  Round 3 decision: OpenRouter caused too many connection errors/timeouts and upstream
+  429s on `:free` models in live concurrent runs, so it is removed from every chain. The
+  provider code stays (`openrouter` is still a supported, working provider name — just
+  unused by default), so it can come back with a chain edit, no code change. A second or
+  third key for the same provider is an ALIAS (`gemini_2`, `gemini_3`, `nvidia_2`,
+  `nvidia_3`): same base URL and request quirks, but its own key, its own pacing/quota
+  bucket and counters. The vendor mix is still a demo asset: each chat bubble is badged
+  with the model (or alias) that produced it.
+- **Seller alone on key 1's Flash-Lite** (15 RPM / 500 RPD). The seller speaks in every
+  thread — with 3 buyers it makes about as many calls as all buyers combined — so it keeps
+  sole use of the biggest pool; buyers 1–3 are spread across the other Gemini/NVIDIA keys.
+- **Gemini free limits are per model** (AI Studio, 2026-09-12): 3.5 Flash and 3 Flash are
+  5 RPM / **20 RPD** — one run's worth of seller calls — so they are backups only.
+  3.1 Flash-Lite is 15 RPM / 500 RPD. NVIDIA: 40 RPM per key, but its trial endpoint
+  stalls >40s on roughly 3 of 7 calls — `NVIDIA_TIMEOUT_S` (default 10s; aliases inherit
+  the base's value) lets a stalled call advance to the next chain entry well before the
+  global 20s `LLM_TIMEOUT_S` (R3-4). Current chains and per-model pacing live in
+  `.env.example`.
 - **Per-minute limits matter more than daily ones** with concurrent threads: pace calls
-  per provider (`*_RPM` in `.env`) and stagger thread starts.
+  per provider/alias (`*_RPM` in `.env`) and stagger thread starts.
 - **Moves are validated JSON, not native tool calling** — free models vary widely in
   tool-call support; a malformed response is just an invalid move that bounces.
 - Recorded replay (section 2) is the demo-day safety net if any free tier is exhausted.

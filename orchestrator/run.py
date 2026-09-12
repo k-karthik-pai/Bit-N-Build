@@ -19,19 +19,32 @@ def _scenario_from_file(path: str) -> Mapping[str, Any]:
     return scenario
 
 
-def main() -> int:
+def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Run the deterministic Orchestrator pipeline")
     parser.add_argument(
         "--scenario",
         help="Optional JSON file containing seller_id, material_id, quantity_tonnes, and objective",
     )
-    args = parser.parse_args()
+    parser.add_argument("--live", action="store_true", help="Run live LLM negotiations (concurrent, validator-gated)")
+    parser.add_argument("--top-n", type=int, default=3, help="Buyers to negotiate with concurrently (3-5)")
+    parser.add_argument("--record", action="store_true", default=True, help="Write events to runs/<run_id>.jsonl (live mode)")
+    args, _ = parser.parse_known_args(argv)
     try:
         scenario = _scenario_from_file(args.scenario) if args.scenario else FIXED_SCENARIO
         unknown = set(scenario) - set(FIXED_SCENARIO)
         if unknown:
             raise ValueError(f"Unknown scenario fields: {sorted(unknown)}")
-        recommendation = run_pipeline(**scenario)
+        if args.live:
+            top_n = max(3, min(5, args.top_n))
+            # stream events to stderr as readable lines
+            from demo.render_log import format_event
+            def emit(ev):
+                line = format_event(ev)
+                if line:
+                    print(line, file=sys.stderr, flush=True)
+            recommendation = run_pipeline(use_llm=True, top_n=top_n, emit_event=emit, **scenario)
+        else:
+            recommendation = run_pipeline(**scenario)
     except (ValueError, KeyError, TypeError, OSError) as exc:
         print(f"Pipeline could not produce a recommendation: {exc}", file=sys.stderr)
         return 1
