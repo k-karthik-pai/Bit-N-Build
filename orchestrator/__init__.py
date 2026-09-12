@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
@@ -143,6 +143,7 @@ def run_pipeline(
     seller_overrides: Optional[Dict[str, Any]] = None,
     buyer_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
     use_batna: bool = True,
+    on_progress: Optional[Callable[[Dict[str, Any]], None]] = None,
 ) -> Dict[str, Any]:
     """
     Deterministic pipeline: Circularity → Negotiation → Logistics → Final output.
@@ -172,6 +173,12 @@ def run_pipeline(
       recovery from a rejection (moving on to the next candidate) is visible
       rather than silently discarded.
     """
+    # Optional presentation hook; the frozen recommendation shape is unchanged.
+    def emit(stage: str, **details: Any) -> None:
+        if on_progress is not None:
+            on_progress({"stage": stage, **details})
+
+    emit("matching_started")
     # Resolve defaults from fixed scenario
     seller_id = seller_id or FIXED_SCENARIO["seller_id"]
     material_id = material_id or FIXED_SCENARIO["material_id"]
@@ -187,6 +194,7 @@ def run_pipeline(
 
     # ---- Step 1: Find compatible buyers ----
     compatible_buyers = _match_buyers(material_id, quantity_tonnes, buyer_overrides)
+    emit("matching_completed", count=len(compatible_buyers))
     if not compatible_buyers:
         raise ValueError(f"No compatible buyers found for material_id={material_id}")
 
@@ -200,6 +208,9 @@ def run_pipeline(
                 ORIGIN_PORT, port_id, quantity_tonnes, DEADLINE_DAYS
             )
 
+            route = _get_route(logistics_cache[port_id], logistics_cache[port_id]["recommended_route_id"])
+            emit("route_completed", origin=ORIGIN_PORT, destination=port_id, **route)
+
     def _logistics_cost_for(buyer: Dict[str, Any]) -> float:
         logistics = logistics_cache[buyer["port_id"]]
         return _get_route(logistics, logistics["recommended_route_id"])["cost_per_tonne_usd"]
@@ -209,6 +220,7 @@ def run_pipeline(
     # each buyer's real negotiation runs.
     baseline_net_value: Dict[str, Optional[float]] = {}
     if use_batna:
+        emit("baseline_started")
         for buyer in compatible_buyers:
             logistics_cost = _logistics_cost_for(buyer)
             baseline_deal = _negotiate_with_buyer(
@@ -243,6 +255,7 @@ def run_pipeline(
                     2,
                 )
 
+        emit("negotiation_started", buyer_name=buyer["name"])
         deal = _negotiate_with_buyer(
             buyer=buyer,
             seller_constraints=seller_constraints,
@@ -250,6 +263,10 @@ def run_pipeline(
             batna_price_per_tonne_usd=batna_price,
         )
 
+        emit("negotiation_completed", buyer_name=buyer["name"],
+             status=deal["status"], price=deal.get("price_per_tonne_usd"),
+             quantity=deal["quantity_tonnes"], term=deal["contract_term_months"],
+             reason=deal.get("validator_reason"))
         net_value = _net_value(deal, logistics_cost)
         pipeline_log.append({
             "buyer_id": buyer["buyer_id"],
