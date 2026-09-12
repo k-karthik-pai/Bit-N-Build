@@ -7,7 +7,7 @@ from unittest.mock import patch
 from pathlib import Path
 
 from agents.negotiation import (
-    negotiate, _parse_limits, _get_limit, _bucket_key, _base_provider,
+    negotiate, _parse_limits, _get_limit, _bucket_key, _base_provider, _quota_owner,
     _is_rpd_exhausted, _record_rpd, _call_llm_for_move, _NEXT_SLOT, _RPD_COUNTS,
 )
 from tests.helpers_events import assert_events_valid
@@ -54,6 +54,7 @@ class NegotiationLoopTests(unittest.TestCase):
             "OPENAI_API_KEY": "", "LLM_API_KEY": "", "NEGOTIATION_LLM_MODEL": "",
             "SELLER_LLM_CHAIN": "", "BUYER_LLM_CHAIN": "",
             "BUYER_1_LLM_CHAIN": "", "BUYER_2_LLM_CHAIN": "", "BUYER_3_LLM_CHAIN": "",
+            "GEMINI_QUOTA_SCOPE": "project",
             # never let RPD persistence touch the real (shared) runs/.quota.json
             "NEGOTIATION_QUOTA_FILE": str(ROOT / "runs" / f".quota-test-{id(self)}.json"),
         }
@@ -369,7 +370,7 @@ class NegotiationLoopTests(unittest.TestCase):
         self.assertIsNone(result["price_per_tonne_usd"])
         self.assertIn("floor", result["validator_reason"])
 
-    # -- R2-6: provider aliases (own key/bucket/limits, base URL/quirks) -----
+    # -- R2-6: provider aliases + project-aware Gemini quotas ---------------
 
     def test_alias_base_provider_and_bucket_and_limit_inheritance(self):
         self.assertEqual(_base_provider("openrouter_2"), "openrouter")
@@ -378,10 +379,14 @@ class NegotiationLoopTests(unittest.TestCase):
         self.assertEqual(_base_provider("openrouter"), "openrouter")
         self.assertEqual(_base_provider("unknown_9"), "unknown_9")  # unknown base: not an alias
 
-        # bucket keyed on the ALIAS itself (own counters), shaped by the base
+        # OpenRouter/NVIDIA aliases are key/account scoped. Gemini aliases
+        # conservatively share the project's per-model quota bucket.
         self.assertEqual(_bucket_key("openrouter_2", "any-model"), "openrouter_2")
-        self.assertEqual(_bucket_key("gemini_3", "gemini-3.1-flash-lite"), "gemini_3:gemini-3.1-flash-lite")
+        self.assertEqual(_bucket_key("gemini_3", "gemini-3.1-flash-lite"), "gemini:gemini-3.1-flash-lite")
         self.assertEqual(_bucket_key("nvidia_2", None), "nvidia_2")
+        self.assertEqual(_quota_owner("gemini_3"), "gemini")
+        with patch.dict("os.environ", {"GEMINI_QUOTA_SCOPE": "key"}):
+            self.assertEqual(_bucket_key("gemini_3", "gemini-3.1-flash-lite"), "gemini_3:gemini-3.1-flash-lite")
 
         # an alias's own limit wins over the base's
         with patch.dict("os.environ", {"OPENROUTER_RPM": "20", "OPENROUTER_2_RPM": "5"}):
@@ -482,6 +487,48 @@ class NegotiationLoopTests(unittest.TestCase):
         fallback = next(e for e in events if e["type"] == "fallback")
         self.assertEqual(fallback["payload"]["cause"], "provider_error")
         self.assertIn("free-models-per-day", fallback["payload"]["detail"])
+
+    def test_every_failed_chain_entry_is_reported_before_deterministic_fallback(self):
+        self._patch_llm_call.stop()
+        attempts = []
+
+        def fail(provider, model, *_args, **_kwargs):
+            attempts.append((provider, model))
+            return None, "timeout" if provider == "nvidia" else "429 rate limited"
+
+        try:
+            with patch("agents.negotiation._call_llm_for_move", side_effect=fail):
+                with patch.dict("os.environ", {
+                    "SELLER_LLM_CHAIN": "gemini:gemini-3.1-flash-lite,nvidia:deepseek-test",
+                }):
+                    _, events = self.run_thread(max_rounds=1)
+        finally:
+            self._patch_llm_call.start()
+
+        self.assertEqual(attempts, [
+            ("gemini", "gemini-3.1-flash-lite"),
+            ("nvidia", "deepseek-test"),
+        ])
+        fallback_index = next(i for i, event in enumerate(events) if event["type"] == "fallback")
+        fallback = events[fallback_index]
+        self.assertEqual(fallback["payload"]["cause"], "timeout")
+        self.assertIn("gemini:gemini-3.1-flash-lite=429 rate limited", fallback["payload"]["detail"])
+        self.assertIn("nvidia:deepseek-test=timeout", fallback["payload"]["detail"])
+        deterministic_offer = next(event for event in events[fallback_index + 1:] if event["type"] == "offer")
+        self.assertTrue(deterministic_offer["delivered"])
+        self.assertIsNone(deterministic_offer["model"])
+
+    def test_provider_failure_reason_redacts_api_keys(self):
+        from agents.negotiation import _classify_llm_exception
+        secret = "test-secret-that-must-not-appear"
+        with patch.dict("os.environ", {"GEMINI_API_KEY": secret}):
+            reason = _classify_llm_exception(
+                RuntimeError(f"upstream echoed {secret}"),
+                "gemini",
+                "gemini-3.1-flash-lite",
+            )
+        self.assertNotIn(secret, reason)
+        self.assertIn("[redacted]", reason)
 
     # -- R3-1: message numbers may quote public thread history -------------
 

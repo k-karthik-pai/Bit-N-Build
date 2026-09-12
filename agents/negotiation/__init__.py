@@ -67,8 +67,9 @@ _RPD_DATE: str = ""  # UTC date of current counts
 # cross-process quota persistence (runs/.quota.json) — R2-4
 _QUOTA_LOCK = threading.Lock()
 
-# provider aliases: <base>_<n> (e.g. openrouter_2, gemini_3) reuse the base
-# provider's URL/quirks/limit-shape but get their own key, bucket and counters — R2-6
+# Provider aliases: <base>_<n> (e.g. openrouter_2, gemini_3) reuse the base
+# provider's URL/quirks/limit-shape but get their own key. Bucket ownership is
+# provider-specific; Gemini defaults to a shared project bucket — R2-6/R6-1.
 _ALIAS_RE = re.compile(r"^([a-z]+)_(\d+)$")
 
 # ---------------------------------------------------------------------------
@@ -498,15 +499,33 @@ def _get_provider_rpd(provider: str, model: Optional[str] = None) -> Optional[fl
     return _get_limit(provider, model, "RPD")
 
 
-def _bucket_key(provider: str, model: Optional[str]) -> str:
-    """Bucket key for pacing/RPD. Keyed on the alias itself (its own counters),
-    shaped (account-wide vs per-model) by the base provider — R2-6."""
+def _quota_owner(provider: str) -> str:
+    """Return the identity that owns rate limits for a provider alias.
+
+    Gemini quotas are project-scoped, not API-key-scoped. The conservative
+    default therefore makes ``gemini``, ``gemini_2`` and ``gemini_3`` share
+    one pacing/RPD bucket. Teams that have verified that every Gemini key is
+    attached to a different Google Cloud project may opt into independent
+    buckets with ``GEMINI_QUOTA_SCOPE=key``.
+
+    NVIDIA and OpenRouter remain key/account scoped, so their aliases keep
+    independent buckets.
+    """
     base = _base_provider(provider)
+    default_scope = "project" if base == "gemini" else "key"
+    scope = os.getenv(f"{base.upper()}_QUOTA_SCOPE", default_scope).strip().lower()
+    return base if scope == "project" else provider
+
+
+def _bucket_key(provider: str, model: Optional[str]) -> str:
+    """Bucket key for pacing/RPD, shaped by the provider's quota scope."""
+    base = _base_provider(provider)
+    owner = _quota_owner(provider)
     if base == "openrouter":
-        return provider
+        return owner
     if base == "gemini":
-        return f"{provider}:{model}" if model else provider
-    return provider
+        return f"{owner}:{model}" if model else owner
+    return owner
 
 
 def _quota_file_path() -> pathlib.Path:
@@ -1138,6 +1157,11 @@ def _classify_llm_exception(exc: Exception, provider: str, model: str) -> str:
     alias's whole bucket exhausted (account-wide) until X-RateLimit-Reset — R2-4.
     """
     msg = str(exc)
+    # Provider SDK messages should not contain credentials, but fail closed if
+    # a proxy or unusual upstream response echoes one into its exception.
+    for name, value in os.environ.items():
+        if name.endswith("_API_KEY") and value:
+            msg = msg.replace(value, "[redacted]")
     status_code = getattr(exc, "status_code", None)
     if "timeout" in type(exc).__name__.lower() or "timed out" in msg.lower():
         return "timeout"
@@ -1262,9 +1286,9 @@ def _get_llm_move(
     """
     Try fake moves first, then provider chains left to right.
     Returns (move, model_string, None) on success, or (None, None, fail_reason)
-    on total failure/timeout — fail_reason is the last chain entry's failure
-    classification (e.g. "timeout", "429 free-models-per-day exhausted for
-    openrouter_2 ...") so the caller can emit an accurate fallback cause (R2-4).
+    on total failure/timeout. On total failure, fail_reason lists each attempted
+    provider/model and its sanitized reason so the visible fallback identifies
+    what actually failed without exposing credentials.
     """
     # fake agent for testing
     if fake_moves is not None and fake_index is not None:
@@ -1280,14 +1304,16 @@ def _get_llm_move(
             if callable(entry):
                 return entry(), "fake:fake-model", None
 
-    last_reason: Optional[str] = None
+    failures: List[str] = []
     for provider, model in chain:
         move, reason = _call_llm_for_move(provider, model, system_prompt, history_for_prompt, temperature)
         if move is not None:
             return move, f"{provider}:{model}", None
         if reason is not None:
-            last_reason = reason
-    return None, None, last_reason
+            failures.append(f"{provider}:{model}={reason}")
+    if failures:
+        return None, None, "all provider attempts failed: " + "; ".join(failures)
+    return None, None, None
 
 # ---------------------------------------------------------------------------
 # Deterministic fallback offer generation (move-level)
@@ -1609,15 +1635,14 @@ def _run_thread_negotiation(
 
         # timeout / total failure → fallback
         if move is None:
-            # accurate cause: only a real timeout (or no chain configured, e.g.
-            # offline/test mode) reports "timeout"; a classified provider
-            # failure (429/exhausted/etc.) reports "provider_error" with the
-            # real reason in detail, never hidden behind a generic message — R2-4
-            if fail_reason is None or fail_reason == "timeout":
+            # Keep the frozen cause enum while retaining per-model evidence in
+            # detail. A chain containing a timeout is labelled timeout; quota,
+            # credential and response failures are provider_error.
+            if fail_reason is None or fail_reason == "timeout" or "=timeout" in fail_reason:
                 cause = "timeout"
-                detail = ("provider call exceeded 20s; deterministic engine holds the last valid offer"
-                          if fail_reason == "timeout" else
-                          "provider call exceeded 20s or all chains failed; deterministic engine holds the last valid offer")
+                detail = (f"{fail_reason}; deterministic engine holds the last valid offer"
+                          if fail_reason else
+                          "no provider chain was available; deterministic engine holds the last valid offer")
             else:
                 cause = "provider_error"
                 detail = f"{fail_reason}; deterministic engine holds the last valid offer"

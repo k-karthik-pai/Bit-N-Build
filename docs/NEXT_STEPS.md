@@ -23,9 +23,11 @@ sample event file, not against finished negotiation code.
 | Provider/model assignment per agent role, with fallback chains and pacing | `.env.example`, "Model and provider" below |
 | Supply decision: one deal closes per run; other agreed threads are released | `docs/AGENTS.md` §2, `docs/LIMITATIONS.md` |
 
-**Verified:** OpenRouter free limits (see "Model and provider" below).
-**Still to verify by hand:** Gemini's current per-model limits in AI Studio — fill
-`GEMINI_RPM` in `.env` from that page, not from memory.
+**Verified in AI Studio on 2026-09-12:** Gemini 3.1 Flash Lite provides 15 RPM,
+250K TPM and 500 RPD for the current project. Runtime operational caps are 14 RPM
+and 480 RPD to leave headroom. The lower-volume 5 RPM / 20 RPD Gemini text models
+are no longer in the default chains. Recheck the dashboard before the demo if the
+project or tier changes.
 
 ---
 
@@ -104,7 +106,7 @@ doesn't match the structured tool-call fields (catches hallucinated figures in p
   (pending), per `LIMITATIONS.md`
 - **Retry cap:** 2 invalid proposals in a row from the same agent → that turn falls back
   to the deterministic engine, logged as a visible `fallback` event (never silent)
-- Per-call timeout (existing 20s) → same visible fallback
+- Per-call timeout (12s Gemini / 8s NVIDIA) → same visible fallback
 
 ### Final selection + explanation
 Final buyer selection stays deterministic (highest total net value, as today). Optionally,
@@ -119,21 +121,24 @@ that isn't in the result.
   provider code stays (`openrouter` is still a supported, working provider name — just
   unused by default), so it can come back with a chain edit, no code change. A second or
   third key for the same provider is an ALIAS (`gemini_2`, `gemini_3`, `nvidia_2`,
-  `nvidia_3`): same base URL and request quirks, but its own key, its own pacing/quota
-  bucket and counters. The vendor mix is still a demo asset: each chat bubble is badged
-  with the model (or alias) that produced it.
-- **Seller alone on key 1's Flash-Lite** (15 RPM / 500 RPD). The seller speaks in every
-  thread — with 3 buyers it makes about as many calls as all buyers combined — so it keeps
-  sole use of the biggest pool; buyers 1–3 are spread across the other Gemini/NVIDIA keys.
+  `nvidia_3`): same base URL and request quirks, but its own key. OpenRouter/NVIDIA
+  aliases have their own key/account buckets; Gemini aliases share the model's project
+  bucket unless `GEMINI_QUOTA_SCOPE=key` is explicitly selected for keys confirmed to
+  belong to separate projects. Each chat bubble is badged with the model alias that
+  produced it.
+- **Gemini 3.1 Flash Lite is primary for every role.** Alternate Gemini keys are next in
+  each chain for key-specific authentication/restriction failures, NVIDIA is the last
+  network fallback, and the deterministic engine is the guaranteed final fallback.
 - **Gemini free limits are per model** (AI Studio, 2026-09-12): 3.5 Flash and 3 Flash are
-  5 RPM / **20 RPD** — one run's worth of seller calls — so they are backups only.
-  3.1 Flash-Lite is 15 RPM / 500 RPD. NVIDIA: 40 RPM per key, but its trial endpoint
-  stalls >40s on roughly 3 of 7 calls — `NVIDIA_TIMEOUT_S` (default 10s; aliases inherit
+  5 RPM / **20 RPD**, so they are supported but absent from default chains.
+  3.1 Flash-Lite is 15 RPM / 250K TPM / 500 RPD; the runtime uses 14 RPM / 480 RPD
+  operational caps. NVIDIA: 40 RPM per key, but its trial endpoint
+  stalls >40s on roughly 3 of 7 calls — `NVIDIA_TIMEOUT_S` (default 8s; aliases inherit
   the base's value) lets a stalled call advance to the next chain entry well before the
   global 20s `LLM_TIMEOUT_S` (R3-4). Current chains and per-model pacing live in
   `.env.example`.
 - **Per-minute limits matter more than daily ones** with concurrent threads: pace calls
-  per provider/alias (`*_RPM` in `.env`) and stagger thread starts.
+  per quota owner/model (`*_RPM` in `.env`) and stagger thread starts.
 - **Moves are validated JSON, not native tool calling** — free models vary widely in
   tool-call support; a malformed response is just an invalid move that bounces.
 - Recorded replay (section 2) is the demo-day safety net if any free tier is exhausted.

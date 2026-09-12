@@ -131,10 +131,16 @@ unless the floor forced it; a buyer fallback never below its previous bid.
 
 - **Models:** Gemini ×3 keys + NVIDIA DeepSeek ×3 keys, as provider aliases (`gemini_2`,
   `nvidia_3`, …) configured in `.env` — see `.env.example`. OpenRouter is supported but
-  unused (too many failures on free tiers). Gemini 3.5 Flash / 3 Flash have only 20
-  requests/day per key — backups only; Flash-Lite (500/day) does the work.
-- **NVIDIA DeepSeek** stalled on 3/3 attempts in the last live run and handed over to
-  Gemini, so the demo currently shows one vendor. Team decision whether that matters.
+  unused (too many failures on free tiers). Gemini 3.1 Flash Lite is the only Gemini
+  model in the default chains: the verified project allowance is 15 RPM / 250K TPM /
+  500 RPD, with conservative runtime caps of 14 RPM / 480 RPD.
+- **Gemini quota scope:** Google enforces these limits per Cloud project, not per API
+  key. The runtime therefore shares one per-model bucket across `gemini`, `gemini_2`
+  and `gemini_3` by default. Set `GEMINI_QUOTA_SCOPE=key` only after confirming that
+  the keys belong to separate projects.
+- **NVIDIA DeepSeek** stalled on 3/3 attempts in an earlier live run. It is now only a
+  final network fallback; a failed complete chain always emits a visible event naming
+  every attempted model before a validated deterministic move continues the thread.
 - **Latest live run** (`run-e32f3cd7`, before these fixes): 58 s, Shah accepted at
   $26.90/t × 65,000 t (net $1,066,000), Crown accepted then released, Seven Circle
   rejected (its $26 ceiling was below the floor set by Shah's live bid — correct).
