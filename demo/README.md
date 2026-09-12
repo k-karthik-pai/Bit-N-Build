@@ -21,7 +21,8 @@ message and a nonzero exit code instead of a success card.
 ## Short rehearsal
 
 1. Introduce the fixed LD slag export scenario. The current buyer dataset is a
-   development stub, not actual commercial contracts.
+   snapshot of 13 real-reference companies and 12 synthetic buyers, with illustrative
+   commercial terms rather than actual contracts.
 2. Run the command. Point to the actual accepted, countered and rejected outcomes.
 3. Read the selected buyer, quantity, price, route, freight, margin and total net
    value from the card. A recommendation marked COUNTERED still needs confirmation.
@@ -47,8 +48,8 @@ the orchestrator keeps the demo run deterministic/reproducible). See
 
 The optimizer enumerates simple paths through the small port graph and sums each
 path's stored `base_cost_per_tonne_usd` values from `data/routes.json`. It sorts by
-cost then distance, keeps up to three routes and picks the first that meets the
-deadline; the current fallback is the cheapest retained route if none meets it.
+cost then distance, checks all paths against the deadline, and retains up to three
+options including the cheapest feasible route. It raises an error if none meets it.
 Transit time is distance divided by 444.5 km/day, plus 0.5 days per intermediate
 stop, rounded to two decimals. `distance_km` values are real sea-route lookups
 (searoutesnav.com), not hand estimates — see `docs/ROUTES_DISTANCE_FIX.md` for the

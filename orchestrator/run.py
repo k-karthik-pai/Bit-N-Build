@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -11,7 +12,7 @@ from orchestrator import FIXED_SCENARIO, run_pipeline
 
 
 def _scenario_from_file(path: str) -> Mapping[str, Any]:
-    with Path(path).open(encoding="utf-8") as handle:
+    with Path(path).open(encoding="utf-8-sig") as handle:
         scenario = json.load(handle)
     if not isinstance(scenario, Mapping):
         raise ValueError("Scenario file must contain a JSON object")
@@ -25,13 +26,15 @@ def main() -> int:
         help="Optional JSON file containing seller_id, material_id, quantity_tonnes, and objective",
     )
     args = parser.parse_args()
-    scenario = _scenario_from_file(args.scenario) if args.scenario else FIXED_SCENARIO
-    recommendation = run_pipeline(
-        seller_id=scenario.get("seller_id"),
-        material_id=scenario.get("material_id"),
-        quantity_tonnes=scenario.get("quantity_tonnes"),
-        objective=scenario.get("objective"),
-    )
+    try:
+        scenario = _scenario_from_file(args.scenario) if args.scenario else FIXED_SCENARIO
+        unknown = set(scenario) - set(FIXED_SCENARIO)
+        if unknown:
+            raise ValueError(f"Unknown scenario fields: {sorted(unknown)}")
+        recommendation = run_pipeline(**scenario)
+    except (ValueError, KeyError, TypeError, OSError) as exc:
+        print(f"Pipeline could not produce a recommendation: {exc}", file=sys.stderr)
+        return 1
     print(json.dumps(recommendation, indent=2))
     return 0
 

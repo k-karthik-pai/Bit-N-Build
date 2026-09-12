@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 from typing import Any, Callable, Dict, List, Optional
+from agents.validation import number
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
@@ -32,7 +33,7 @@ DEADLINE_DAYS = 20
 # ---------------------------------------------------------------------------
 
 def _load_json(filename: str) -> Any:
-    with open(os.path.join(DATA_DIR, filename)) as f:
+    with open(os.path.join(DATA_DIR, filename), encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -72,6 +73,12 @@ def _match_buyers(
     materials = _load_json("materials.json")
     buyers = _load_json("buyers.json")
     if buyer_overrides:
+        unknown = set(buyer_overrides) - {b['buyer_id'] for b in buyers}
+        if unknown:
+            raise ValueError(f"Unknown buyer overrides: {sorted(unknown)}")
+        for buyer_id, changes in buyer_overrides.items():
+            if not isinstance(changes, dict) or 'buyer_id' in changes:
+                raise ValueError(f"Invalid override for {buyer_id}: buyer_id cannot change")
         buyers = [
             {**b, **buyer_overrides[b["buyer_id"]]} if b["buyer_id"] in buyer_overrides else b
             for b in buyers
@@ -207,17 +214,33 @@ def run_pipeline(
             on_progress({"stage": stage, **details})
 
     emit("matching_started")
+    if seller_overrides is not None and not isinstance(seller_overrides, dict):
+        raise ValueError("seller_overrides must be an object")
+    if seller_overrides and {'seller_id', 'material_id'} & set(seller_overrides):
+        raise ValueError("Seller identity and supplied material cannot be overridden")
+    if buyer_overrides is not None and not isinstance(buyer_overrides, dict):
+        raise ValueError("buyer_overrides must be an object")
     # Resolve defaults from fixed scenario
-    seller_id = seller_id or FIXED_SCENARIO["seller_id"]
-    material_id = material_id or FIXED_SCENARIO["material_id"]
-    quantity_tonnes = quantity_tonnes or FIXED_SCENARIO["quantity_tonnes"]
-    objective = objective or FIXED_SCENARIO["objective"]
+    seller_id = FIXED_SCENARIO["seller_id"] if seller_id is None else seller_id
+    material_id = FIXED_SCENARIO["material_id"] if material_id is None else material_id
+    quantity_tonnes = number(FIXED_SCENARIO["quantity_tonnes"] if quantity_tonnes is None else quantity_tonnes,
+                             "quantity_tonnes", positive=True)
+    objective = FIXED_SCENARIO["objective"] if objective is None else objective
+    if objective != "maximize_net_value":
+        raise ValueError(f"Unsupported objective: {objective}")
 
     seller = {**_load_json("seller.json"), **(seller_overrides or {})}
+    if seller_id != seller["seller_id"]:
+        raise ValueError(f"Unknown seller_id: {seller_id}")
+    if material_id != seller["material_id"]:
+        raise ValueError(f"Seller does not supply material_id={material_id}")
+    quantity_tonnes = min(quantity_tonnes, number(seller["available_quantity_tonnes_per_year"],
+                                                 "seller availability", positive=True))
+    origin_port = seller["nearest_port_id"]
     seller_constraints = {
         "min_acceptable_price_per_tonne_usd": seller["min_acceptable_price_per_tonne_usd"],
         "preferred_price_per_tonne_usd": seller["preferred_price_per_tonne_usd"],
-        "available_quantity_tonnes": seller["available_quantity_tonnes_per_year"],
+        "available_quantity_tonnes": quantity_tonnes,
     }
 
     # ---- Step 1: Find compatible buyers ----
@@ -233,10 +256,10 @@ def run_pipeline(
         port_id = buyer["port_id"]
         if port_id not in logistics_cache:
             logistics_cache[port_id] = _get_logistics(
-                ORIGIN_PORT, port_id, quantity_tonnes, DEADLINE_DAYS
+                origin_port, port_id, quantity_tonnes, DEADLINE_DAYS
             )
             route = _get_route(logistics_cache[port_id], logistics_cache[port_id]["recommended_route_id"])
-            emit("route_completed", origin=ORIGIN_PORT, destination=port_id, **route)
+            emit("route_completed", origin=origin_port, destination=port_id, **route)
 
     def _logistics_cost_for(buyer: Dict[str, Any]) -> float:
         logistics = logistics_cache[buyer["port_id"]]
@@ -351,7 +374,7 @@ def run_pipeline(
         "buyer_name": buyer["name"],
         "price_per_tonne_usd": price,
         "route": {
-            "origin_port": ORIGIN_PORT,
+            "origin_port": origin_port,
             "destination_port": buyer["port_id"],
             "distance_km": route["distance_km"],
             "transit_days": route["transit_days"],
@@ -359,10 +382,10 @@ def run_pipeline(
         },
         "margin_per_tonne_usd": margin,
         "total_net_value_usd": total_net_value,
-        # 0.85 t CO2 avoided per t of clinker replaced by LD slag: clinker
-        # calcination emits ~0.8-0.9 t CO2/t (industry-standard figure); using
-        # LD slag as a substitute skips that step. See data/RESEARCH_FINDINGS.md §8.
-        "co2_avoided_tonnes_estimate": round(deal["quantity_tonnes"] * 0.85, 2),
+        # Illustrative scenario factor, not a verified LD-slag lifecycle saving.
+        # Assumes one tonne of clinker displaced per tonne shipped; see docs/LIMITATIONS.md.
+        "co2_avoided_tonnes_estimate": round(deal["quantity_tonnes"] * 0.85, 2)
+        if buyer.get('_circularity_application') == 'cement_clinker_substitute' else 0.0,
         "pipeline_log": pipeline_log,
     }
 

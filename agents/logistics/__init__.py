@@ -6,7 +6,7 @@ return route options with distance, transit time, and cost.
 
 Core architecture:
 - Ports are nodes, routes are edges with distance/cost.
-- Dijkstra's algorithm finds shortest/cheapest paths.
+- DFS enumerates simple paths through the small graph.
 - Returns top 2-3 candidate routes plus a recommended one.
 """
 
@@ -17,6 +17,7 @@ import math
 import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
+from agents.validation import number
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -63,12 +64,14 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 # ---------------------------------------------------------------------------
 
 def _load_ports() -> Dict[str, Dict[str, Any]]:
-    with open(os.path.join(DATA_DIR, "ports.json")) as f:
+    with open(os.path.join(DATA_DIR, "ports.json"), encoding="utf-8") as f:
         ports_list = json.load(f)
+    if len({p['port_id'] for p in ports_list}) != len(ports_list):
+        raise ValueError("Duplicate port_id in ports dataset")
     return {p["port_id"]: p for p in ports_list}
 
 def _load_edges() -> List[RouteEdge]:
-    with open(os.path.join(DATA_DIR, "routes.json")) as f:
+    with open(os.path.join(DATA_DIR, "routes.json"), encoding="utf-8") as f:
         routes_list = json.load(f)
     return [
         RouteEdge(
@@ -86,8 +89,11 @@ def build_graph() -> Dict[str, List[RouteEdge]]:
     ports = _load_ports()
     graph: Dict[str, List[RouteEdge]] = {pid: [] for pid in ports}
     for edge in edges:
-        if edge.from_port in graph:
-            graph[edge.from_port].append(edge)
+        if edge.from_port not in graph or edge.to_port not in graph:
+            raise ValueError("Route references an unknown port")
+        number(edge.distance_km, "route distance", positive=True)
+        number(edge.base_cost_per_tonne_usd, "route freight")
+        graph[edge.from_port].append(edge)
     return graph
 
 # ---------------------------------------------------------------------------
@@ -131,6 +137,8 @@ def compute_transit_days(distance_km: float, num_stops: int = 0) -> float:
     Sailing speed ~10 knots (444.5 km/day).
     Port processing: 0.5 days per intermediate port stop.
     """
+    number(distance_km, "distance_km")
+    number(num_stops, "num_stops")
     sailing_days = distance_km / CARGO_SHIP_SPEED_KM_PER_DAY
     processing_days = num_stops * PORT_PROCESSING_DAYS
     return round(sailing_days + processing_days, 2)
@@ -169,6 +177,8 @@ def optimize_routes(
         "recommended_route_id": "string"
       }
     """
+    number(cargo_tonnes, "cargo_tonnes", positive=True)
+    number(deadline_days, "deadline_days", positive=True)
     graph = build_graph()
 
     # Validate ports exist
@@ -187,7 +197,7 @@ def optimize_routes(
     # Build RouteResult objects, sorted by cost_per_tonne_usd
     route_results: List[RouteResult] = []
     for i, (path, total_dist, total_cost) in enumerate(all_paths):
-        num_stops = len(path) - 2  # intermediate ports
+        num_stops = max(0, len(path) - 2)  # intermediate ports
         transit = compute_transit_days(total_dist, num_stops)
         route_results.append(RouteResult(
             route_id=f"route_{i + 1}_{path[0]}_{path[-1]}",
@@ -200,15 +210,16 @@ def optimize_routes(
     # Sort by cost_per_tonne_usd (primary), then distance (secondary)
     route_results.sort(key=lambda r: (r.cost_per_tonne_usd, r.distance_km))
 
-    # Take top 2-3
+    # Check exact modeled times before rounding, across ALL routes.
+    feasible = [r for r in route_results
+                if r.distance_km / CARGO_SHIP_SPEED_KM_PER_DAY
+                + max(0, len(r.path_port_ids) - 2) * PORT_PROCESSING_DAYS <= deadline_days]
+    if not feasible:
+        raise ValueError(f"No route meets deadline of {deadline_days} days")
+    recommended = feasible[0]
     top_routes = route_results[:3]
-
-    # Recommend: lowest cost that meets deadline
-    recommended = top_routes[0]
-    for r in top_routes:
-        if r.transit_days <= deadline_days:
-            recommended = r
-            break
+    if recommended not in top_routes:
+        top_routes = route_results[:2] + [recommended]
 
     return {
         "routes": [
@@ -234,7 +245,7 @@ def get_route_cost(logistics_output: Dict[str, Any], route_id: Optional[str] = N
     for route in logistics_output["routes"]:
         if route["route_id"] == target_route_id:
             return route["cost_per_tonne_usd"]
-    return logistics_output["routes"][0]["cost_per_tonne_usd"]
+    raise ValueError(f"Recommended route {target_route_id!r} is missing")
 
 
 # Keep contract-compatible alias

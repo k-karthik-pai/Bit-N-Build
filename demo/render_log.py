@@ -85,6 +85,7 @@ def render(result: Dict[str, Any], *, include_log: bool = True) -> str:
     lines.append(f"  Total net value:        {_number(result['total_net_value_usd'], money=True)}")
     lines.append(f"  CO2 avoided (estimate): {_number(result['co2_avoided_tonnes_estimate'])} t")
     lines.append("  Currency: USD; t = metric tonnes")
+    lines.append("  Scenario assumptions: buyer terms/freight are illustrative; CO2 uses a clinker-displacement assumption, not measured savings.")
     return "\n".join(lines)
 
 
