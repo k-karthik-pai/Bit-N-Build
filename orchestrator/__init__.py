@@ -299,7 +299,10 @@ def run_pipeline(
         },
         "margin_per_tonne_usd": margin,
         "total_net_value_usd": total_net_value,
-        "co2_avoided_tonnes_estimate": round(deal["quantity_tonnes"] * 0.05, 2),
+        # 0.85 t CO2 avoided per t of clinker replaced by LD slag: clinker
+        # calcination emits ~0.8-0.9 t CO2/t (industry-standard figure); using
+        # LD slag as a substitute skips that step. See data/RESEARCH_FINDINGS.md §8.
+        "co2_avoided_tonnes_estimate": round(deal["quantity_tonnes"] * 0.85, 2),
         "pipeline_log": pipeline_log,
     }
 
