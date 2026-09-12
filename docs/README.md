@@ -23,7 +23,7 @@ find a buyer, negotiate terms, and route a shipment — autonomously.
 - `docs/PLAN.md` — scope, timeline, ownership, what we are NOT building
 - `docs/AGENTS.md` — every agent's input/output contract in one place (read this before touching any agent code)
 - `docs/DATA.md` — schema + sourcing notes for everything in `/data/`
-- `docs/briefs/` — one file per buildable unit: purpose, contract, acceptance criteria, dependencies
+- `docs/brief-*.md` — one file per buildable unit: purpose, contract, acceptance criteria, dependencies
 
 ## Setup
 
@@ -34,5 +34,5 @@ find a buyer, negotiate terms, and route a shipment — autonomously.
 pip install -r requirements.txt
 
 # run orchestrator against the fixed demo scenario
-python orchestrator/run.py --scenario data/scenario_tata_steel_bsl.json
+python -m orchestrator.run
 ```

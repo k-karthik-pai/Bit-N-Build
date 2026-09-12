@@ -20,7 +20,7 @@ QUALITY_RULE_PATTERN = re.compile(
 )
 
 
-class CircularityError(Exception):
+class CircularityError(ValueError):
     """Base class for errors that can be presented safely to a caller."""
 
 
@@ -33,11 +33,10 @@ class DataValidationError(CircularityError):
 
 
 def _is_number(value: object) -> bool:
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(float(value))
-    )
+    try:
+        return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
+    except OverflowError:
+        return False
 
 
 def _required_string(record: Mapping[str, Any], field: str, context: str) -> str:
@@ -239,9 +238,7 @@ def _select_application(
         if not application_passed:
             continue
 
-        specificity = len(
-            set(buyer_requirements) | set(application["requirements"])
-        )
+        specificity = len(application["requirements"])
         if specificity > best_specificity:
             best_specificity = specificity
             best_match = (
@@ -322,13 +319,13 @@ def find_candidates(
 def _load_json(path: str | Path, dataset_name: str) -> Any:
     dataset_path = Path(path)
     try:
-        with dataset_path.open("r", encoding="utf-8") as file:
+        with dataset_path.open("r", encoding="utf-8-sig") as file:
             return json.load(file)
     except FileNotFoundError as error:
         raise DataValidationError(
             f"{dataset_name} dataset not found: {dataset_path}"
         ) from error
-    except OSError as error:
+    except (OSError, UnicodeError) as error:
         raise DataValidationError(
             f"could not read {dataset_name} dataset {dataset_path}: {error}"
         ) from error

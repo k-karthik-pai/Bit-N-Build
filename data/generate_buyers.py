@@ -1,8 +1,8 @@
 """
 Generates data/buyers.json per docs/brief-dataset.md step 4:
   1. Hardcode real Bangladeshi cement companies (is_real_reference: true),
-     anchored to data/RESEARCH_FINDINGS.md's research (company profiles,
-     port preferences, cement capacity/import data).
+     accompanied by source notes for company profiles and port assumptions.
+     The original research report was not committed; see docs/LIMITATIONS.md.
   2. Generate synthetic entries (is_real_reference: false) by varying
      demand/price/port within realistic bounds around those anchors.
 
@@ -29,7 +29,7 @@ OUTPUT_PATH = Path(__file__).parent / "buyers.json"
 MATERIAL_ID = "ld_slag"
 
 # ---------------------------------------------------------------------------
-# Real companies (docs/RESEARCH_FINDINGS.md sec 2) - port preference and
+# Real-reference companies (see source_note below) - port preference and
 # relative size are anchored to that research; exact LD-slag demand/price
 # figures are illustrative (see module docstring).
 # ---------------------------------------------------------------------------

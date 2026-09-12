@@ -1,5 +1,14 @@
 # Known issues
 
+## Reliability review
+
+Regression tests now cover requested-quantity and supply caps, fractional tonnes,
+unknown requests, non-finite prices, negative costs, non-profitable deals, impossible
+deadlines, and missing recommended routes. CLI errors are printed without tracebacks.
+The default demo remains offline; optional LLM numeric placeholders and error fallback
+are tested with mocked responses, not a live provider request.
+See `LIMITATIONS.md` for unresolved data provenance and model assumptions.
+
 ## RESOLVED — Orchestrator was picking highest per-tonne margin, not highest total deal value
 
 **Status: fixed.** `run_pipeline`'s buyer-selection loop now compares

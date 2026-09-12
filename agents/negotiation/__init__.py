@@ -21,6 +21,10 @@ Core logic:
 from __future__ import annotations
 
 import os
+import re
+import json
+import logging
+from agents.validation import number
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
@@ -54,10 +58,11 @@ def validate_proposal(
     Returns (is_valid, reason).  A price can only be marked `accepted` if
     seller_min <= price <= buyer_max (inclusive, with tiny epsilon).
     """
-    if price_per_tonne_usd is None:
-        return False, "price is None"
-    if not isinstance(price_per_tonne_usd, (int, float)):
-        return False, f"price must be numeric, got {type(price_per_tonne_usd)}"
+    try:
+        for value, name in ((price_per_tonne_usd, 'price'), (seller_min, 'seller floor'), (buyer_max, 'buyer ceiling')):
+            number(value, name)
+    except ValueError as exc:
+        return False, str(exc)
     eps = 1e-9
     if price_per_tonne_usd + eps < seller_min:
         return False, f"price {price_per_tonne_usd} below seller min {seller_min}"
@@ -71,8 +76,11 @@ def validate_quantity(
     available_quantity_tonnes: float,
     annual_demand_tonnes: float,
 ) -> Tuple[bool, str]:
-    if quantity_tonnes is None:
-        return False, "quantity is None"
+    try:
+        for value, name in ((quantity_tonnes, 'quantity'), (available_quantity_tonnes, 'availability'), (annual_demand_tonnes, 'demand')):
+            number(value, name)
+    except ValueError as exc:
+        return False, str(exc)
     if quantity_tonnes < 0:
         return False, "quantity negative"
     if quantity_tonnes - 1e-9 > available_quantity_tonnes:
@@ -93,6 +101,9 @@ def compute_margin_per_tonne(
     processing_cost_per_tonne_usd: float = DEFAULT_PROCESSING_COST_PER_TONNE_USD,
 ) -> float:
     """margin = price − logistics − handling − processing"""
+    for value, name in ((price_per_tonne_usd, 'price'), (logistics_cost_per_tonne_usd, 'logistics'),
+                        (handling_cost_per_tonne_usd, 'handling'), (processing_cost_per_tonne_usd, 'processing')):
+        number(value, name)
     return (
         price_per_tonne_usd
         - logistics_cost_per_tonne_usd
@@ -127,23 +138,20 @@ def _deterministic_transcript(
                 "message": (
                     f"Seller opening: we can supply LD slag at ${seller_preferred:.2f}/t "
                     f"(minimum acceptable ${seller_min:.2f}/t, quantity {quantity}t, "
-                    f"logistics ~${logistics_cost:.2f}/t). Margin at preferred would be "
-                    f"${compute_margin_per_tonne(seller_preferred, logistics_cost):.2f}/t.{batna_suffix}"
+                    f"logistics ~${logistics_cost:.2f}/t).{batna_suffix}"
                 ),
             },
             {
                 "speaker": "buyer_agent",
                 "message": (
                     f"Buyer {buyer_id}: our ceiling is ${buyer_max:.2f}/t for this grade "
-                    f"(annual demand {quantity}t). At ${seller_min:.2f}/t min we still "
-                    f"cannot meet — gap is ${seller_min - buyer_max:.2f}/t."
+                    f"(proposed quantity {quantity}t). These terms do not yield a viable deal."
                 ),
             },
             {
                 "speaker": "seller_agent",
                 "message": (
-                    "Seller: no overlap between our floor and your ceiling. "
-                    "Deal cannot proceed at current constraints. Rejected."
+                    "Seller: deal cannot proceed at current price and quantity constraints. Rejected."
                 ),
             },
         ]
@@ -163,7 +171,7 @@ def _deterministic_transcript(
                 "speaker": "buyer_agent",
                 "message": (
                     f"Buyer {buyer_id}: we can stretch to ${buyer_max:.2f}/t max. "
-                    f"Your preferred ${seller_preferred:.2f}/t is above our ceiling."
+                    f"We are reviewing the proposed terms against our budget."
                 ),
             },
             {
@@ -178,7 +186,7 @@ def _deterministic_transcript(
             {
                 "speaker": "buyer_agent",
                 "message": (
-                    f"Buyer {buyer_id}: ${price:.2f}/t is at our limit — need internal "
+                    f"Buyer {buyer_id}: ${price:.2f}/t needs internal "
                     f"approval at this margin. Countered, pending confirmation."
                 ),
             },
@@ -264,38 +272,20 @@ def _try_llm_transcript(
         # Lazy import so module works without openai installed
         from openai import OpenAI  # type: ignore
 
-        client = OpenAI(**client_kwargs)
+        client = OpenAI(**client_kwargs, timeout=20.0, max_retries=0)
 
-        batna_instruction = f" {batna_note}" if batna_note else ""
-
-        # We constrain the LLM with the already-validated numeric proposal.
-        # It only writes the dialogue, not the price decision.
-        if status == "rejected":
-            instruction = (
-                f"Write a 3-turn negotiation transcript that ends in rejection. "
-                f"Seller floor ${seller_min:.2f}/t, preferred ${seller_preferred:.2f}/t; "
-                f"buyer {buyer_id} ceiling ${buyer_max:.2f}/t. No overlap. "
-                f"Quantity {quantity}t. Be concise, professional.{batna_instruction}"
-            )
-        elif status == "countered":
-            instruction = (
-                f"Write a 4-turn negotiation transcript that ends in a counter-offer. "
-                f"Seller floor ${seller_min:.2f}/t, preferred ${seller_preferred:.2f}/t; "
-                f"buyer {buyer_id} ceiling ${buyer_max:.2f}/t. "
-                f"Agreed counter price is ${price:.2f}/t, margin ${margin:.2f}/t, "
-                f"quantity {quantity}t, logistics ${logistics_cost:.2f}/t. "
-                f"Show the seller lowering expectations to meet the buyer at the validated price."
-                f"{batna_instruction}"
-            )
-        else:
-            instruction = (
-                f"Write a 4-turn negotiation transcript that ends in acceptance. "
-                f"Seller floor ${seller_min:.2f}/t, preferred ${seller_preferred:.2f}/t; "
-                f"buyer {buyer_id} ceiling ${buyer_max:.2f}/t. "
-                f"Final validated price ${price:.2f}/t, margin ${margin:.2f}/t, "
-                f"quantity {quantity}t, logistics ${logistics_cost:.2f}/t, "
-                f"term {CONTRACT_TERM_MONTHS} months.{batna_instruction}"
-            )
+        canonical = _deterministic_transcript(
+            seller_min=seller_min, seller_preferred=seller_preferred,
+            buyer_max=buyer_max, buyer_id=buyer_id, logistics_cost=logistics_cost,
+            price=price, quantity=quantity, status=status, margin=margin, batna_note=batna_note)
+        values = {}
+        def protect(match):
+            token = f"{{{{VALUE_{len(values)}}}}}"
+            values[token] = match.group()
+            return token
+        templates = [{**entry, 'message': re.sub(r'\d+(?:\.\d+)?', protect, entry['message'])}
+                     for entry in canonical]
+        instruction = json.dumps({'status': status, 'transcript': templates})
 
         resp = client.chat.completions.create(
             model=model,
@@ -306,17 +296,16 @@ def _try_llm_transcript(
                     "role": "system",
                     "content": (
                         "You are a negotiation dialogue generator for industrial by-product sales. "
-                        "You write ONLY the transcript messages. Do not invent a different price — "
-                        "use exactly the numbers given. Output JSON list of {speaker, message} "
-                        "objects with speaker in ['seller_agent','buyer_agent']."
+                        'Paraphrase the supplied transcript without changing its meaning or status. '
+                        'Preserve all {{VALUE_n}} placeholders in exactly the same order in each message. '
+                        'Do not add numbers or number words. Preserve speakers and turn count. '
+                        'Return a JSON object with a "transcript" list of {speaker, message} objects.'
                     ),
                 },
                 {"role": "user", "content": instruction},
             ],
             response_format={"type": "json_object"},
         )
-        import json
-
         raw = resp.choices[0].message.content or ""
         parsed = json.loads(raw)
         # Accept either {"transcript": [...]} or bare list
@@ -330,22 +319,30 @@ def _try_llm_transcript(
             if transcript is None:
                 return None
 
-        # Validate shape, clamp to 2–4 turns, ensure alternating speakers
+        if not isinstance(transcript, list) or len(transcript) != len(templates):
+            return None
+        # Numbers are inserted locally only after all protected tokens validate.
         cleaned: List[Dict[str, str]] = []
-        for entry in transcript[:4]:
+        for entry, template in zip(transcript, templates):
             if not isinstance(entry, dict):
-                continue
+                return None
             speaker = entry.get("speaker", "")
             message = entry.get("message", "")
-            if speaker not in ("seller_agent", "buyer_agent"):
-                # infer by position
-                speaker = "seller_agent" if len(cleaned) % 2 == 0 else "buyer_agent"
-            cleaned.append({"speaker": speaker, "message": str(message)[:600]})
+            if speaker != template['speaker'] or not isinstance(message, str) or not message.strip() or len(message) > 2000:
+                return None
+            pattern = r'\{\{VALUE_\d+\}\}'
+            if re.findall(pattern, message) != re.findall(pattern, template['message']):
+                return None
+            remaining = re.sub(pattern, '', message)
+            if re.search(r'\d|\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|hundred|thousand|million|billion)\b', remaining, re.I):
+                return None
+            cleaned.append({'speaker': speaker, 'message': re.sub(pattern, lambda m: values[m.group()], message)})
 
         if 2 <= len(cleaned) <= 4:
             return cleaned
         return None
-    except Exception:
+    except Exception as exc:
+        logging.getLogger(__name__).warning("LLM transcript unavailable (%s); using local transcript", type(exc).__name__)
         return None
 
 
@@ -431,6 +428,20 @@ def negotiate(
       status in {"accepted","rejected","countered"}
     """
     # ---- Input validation ----
+    if not isinstance(seller_constraints, dict) or not isinstance(buyer, dict):
+        raise ValueError("seller_constraints and buyer must be objects")
+    for record, fields in ((seller_constraints, ('min_acceptable_price_per_tonne_usd',
+            'preferred_price_per_tonne_usd', 'available_quantity_tonnes')),
+            (buyer, ('max_acceptable_price_per_tonne_usd', 'annual_demand_tonnes'))):
+        for field in fields:
+            if field in record:
+                number(record[field], field)
+    for value, name in ((logistics_cost_per_tonne_usd, 'logistics cost'),
+                        (handling_cost_per_tonne_usd, 'handling cost'),
+                        (processing_cost_per_tonne_usd, 'processing cost')):
+        number(value, name)
+    if batna_price_per_tonne_usd is not None:
+        number(batna_price_per_tonne_usd, 'BATNA price')
     try:
         seller_min = float(seller_constraints["min_acceptable_price_per_tonne_usd"])
         seller_preferred = float(seller_constraints.get("preferred_price_per_tonne_usd", seller_min))
@@ -452,7 +463,9 @@ def negotiate(
     except (TypeError, ValueError) as exc:
         raise ValueError(f"Invalid cost figures: {exc}") from exc
 
-    quantity = int(min(available, demand)) if demand > 0 and available > 0 else 0
+    quantity = min(available, demand)
+    if quantity.is_integer():
+        quantity = int(quantity)
 
     # ---- BATNA: the seller never accepts less than its best walk-away
     # alternative. effective_seller_min is what every downstream check uses
@@ -593,7 +606,7 @@ def negotiate(
     if not q_valid and quantity != 0:
         raise ValueError(f"Quantity validation failed: {q_reason}")
 
-    if quantity == 0:
+    if quantity == 0 or margin <= 0:
         # Zero-tonne deals are not meaningful accepts/counters — reject instead.
         status = "rejected"
         transcript = generate_transcript(
@@ -620,7 +633,8 @@ def negotiate(
             "handling_cost_per_tonne_usd": handling_cost,
             "processing_cost_per_tonne_usd": processing_cost,
             "batna_price_per_tonne_usd": batna_price_per_tonne_usd,
-            "validator_reason": "quantity is zero: no viable deal (available or demand is 0)",
+            "validator_reason": "quantity is zero: no viable deal (available or demand is 0)"
+            if quantity == 0 else "non-positive margin: no profitable deal at the proposed price",
         }
 
     return {
