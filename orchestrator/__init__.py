@@ -44,36 +44,58 @@ def _get_route(logistics: Dict[str, Any], route_id: str) -> Dict[str, Any]:
     raise ValueError(f"Recommended route '{route_id}' is missing from logistics response")
 
 # ---------------------------------------------------------------------------
-# Step 1: Circularity / Matching Agent (simplified — stub with real data)
+# Step 1: Circularity / Matching Agent
 # ---------------------------------------------------------------------------
 
 def _match_buyers(
     material_id: str,
     quantity_tonnes: int,
+    seller_id: str,
     buyer_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Find compatible buyers for the given material and quantity.
-    In a full implementation, this would use the Circularity Agent.
-    For now, load from buyers.json and filter by material and capacity.
+    Find and rank compatible buyers via the Circularity Agent (AGENTS.md
+    section 1) — it decides ranking (compatibility_score) and which buyers
+    even qualify (material match + quality requirements met by the
+    material's composition); the orchestrator just attaches each ranked
+    candidate's full buyer record (port, price ceiling, demand, etc.) for
+    the downstream Logistics/Negotiation steps, which the Circularity Agent's
+    own output doesn't carry.
 
     buyer_overrides (for live judge-driven re-negotiation, e.g. "what if this
     buyer's demand doubled?"): {buyer_id: {field: new_value, ...}}, merged
-    onto the loaded record before filtering/scoring. Omit for the plain
+    onto the loaded record before matching/ranking. Omit for the plain
     fixed-scenario run.
     """
+    from agents.circularity import find_candidates
+
+    materials = _load_json("materials.json")
     buyers = _load_json("buyers.json")
     if buyer_overrides:
         buyers = [
             {**b, **buyer_overrides[b["buyer_id"]]} if b["buyer_id"] in buyer_overrides else b
             for b in buyers
         ]
-    target_material = material_id or "ld_slag"
+    buyers_by_id = {b["buyer_id"]: b for b in buyers}
 
-    compatible = [b for b in buyers if b["material_required_id"] == target_material]
-    # Sort by compatibility (higher demand = better match)
-    compatible.sort(key=lambda b: b["annual_demand_tonnes"], reverse=True)
-    return compatible
+    match_result = find_candidates(
+        {"material_id": material_id, "quantity_tonnes": quantity_tonnes, "seller_id": seller_id},
+        materials,
+        buyers,
+    )
+
+    ranked_buyers = []
+    for candidate in match_result["candidates"]:
+        buyer = buyers_by_id.get(candidate["buyer_id"])
+        if buyer is None:
+            continue  # candidate ids always come from the buyers list passed in
+        ranked_buyers.append({
+            **buyer,
+            "_circularity_application": candidate["application"],
+            "_circularity_compatibility_score": candidate["compatibility_score"],
+            "_circularity_notes": candidate["notes"],
+        })
+    return ranked_buyers
 
 # ---------------------------------------------------------------------------
 # Step 2: Negotiation Agent
@@ -186,7 +208,7 @@ def run_pipeline(
     }
 
     # ---- Step 1: Find compatible buyers ----
-    compatible_buyers = _match_buyers(material_id, quantity_tonnes, buyer_overrides)
+    compatible_buyers = _match_buyers(material_id, quantity_tonnes, seller_id, buyer_overrides)
     if not compatible_buyers:
         raise ValueError(f"No compatible buyers found for material_id={material_id}")
 
@@ -254,6 +276,8 @@ def run_pipeline(
         pipeline_log.append({
             "buyer_id": buyer["buyer_id"],
             "buyer_name": buyer.get("name"),
+            "circularity_application": buyer.get("_circularity_application"),
+            "circularity_compatibility_score": buyer.get("_circularity_compatibility_score"),
             "status": deal["status"],
             "price_per_tonne_usd": deal.get("price_per_tonne_usd"),
             "batna_price_per_tonne_usd": batna_price,
