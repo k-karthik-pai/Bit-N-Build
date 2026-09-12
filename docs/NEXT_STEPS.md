@@ -11,33 +11,22 @@ sample event file, not against finished negotiation code.
 
 ---
 
-## 0. Freeze the event schema first
+## 0. Freeze contracts first — ✅ DONE (team agreed)
 
-Every agent message, tool call, validator verdict and system step is one event. This is
-the contract between the negotiation work and the UI work; freeze it before either starts
-(same discipline as `AGENTS.md`).
+| Item | Where |
+|---|---|
+| Direction agreed; negotiation contract revised (LLM makes moves, two validator gates: move-legal on the proposer's own bounds, deal-legal at accept) | `docs/AGENTS.md` §2 |
+| Event schema frozen | `docs/EVENTS.md` |
+| Reference run for the UI (36 events: 3 concurrent threads, 2 validator bounces + retries, 1 timeout fallback, accepted / countered / released, recommendation) | `demo/sample_run.jsonl` |
+| Schema + sample checked against the real data files | `tests/test_events_sample.py` |
+| Contract-length ranges added to the data (derived from demand tier, all contain 12) | `data/generate_buyers.py`, `data/buyers.json`, `data/seller.json`, `docs/DATA.md` |
+| Provider/model assignment per agent role, with fallback chains and pacing | `.env.example`, "Model and provider" below |
+| Supply decision: one deal closes per run; other agreed threads are released | `docs/AGENTS.md` §2, `docs/LIMITATIONS.md` |
 
-```json
-{
-  "ts": "2026-09-12T10:15:03.412Z",
-  "seq": 42,
-  "run_id": "string",
-  "deal_id": "shah_cement",
-  "from_agent": "seller_agent | buyer_agent:<buyer_id> | logistics_agent | circularity_agent | orchestrator | validator",
-  "to_agent": "string | null",
-  "type": "match | route | offer | accept | reject | info_request | info_response | validator_verdict | fallback | deal_closed | recommendation",
-  "payload": {},
-  "validator": {"ok": true, "reason": "within bounds"}
-}
-```
-
-- `payload` for offers: `{offer_id, price_per_tonne_usd, quantity_tonnes, contract_months, message, rationale}`.
-  `message` is what the counterparty sees; `rationale` is the agent's private reasoning,
-  shown in the UI as a collapsible "thinking" line but never sent to the other agent.
-- The final `recommendation` event carries the existing `AGENTS.md` section 4 object unchanged.
-- Deliverable for this step: `docs/EVENTS.md` + `demo/sample_run.jsonl` (hand-written,
-  ~40 events covering an offer, a validator rejection, a retry, a rejection, an accept,
-  and the recommendation).
+**Still to verify by hand (needs your keys):** OpenRouter's account-level free quota
+(`curl -s https://openrouter.ai/api/v1/key -H "Authorization: Bearer $OPENROUTER_API_KEY"`)
+and Gemini's current per-model limits in AI Studio. Fill `*_RPM` in `.env` from those
+numbers, not from memory.
 
 ---
 
@@ -122,13 +111,25 @@ a **deal-desk LLM step** writes the "why this buyer won" explanation, grounded o
 computed numbers — run the same number-extraction check on it so it can't cite a figure
 that isn't in the result.
 
-### Model and provider
-- Tool calling needs a model that does it reliably. The current default
-  (`nex-agi/nex-n2.5-mini:free` on OpenRouter) is a risk: free-tier models have daily
-  request caps (check current OpenRouter limits — at ~60 calls/run, a low cap means one
-  rehearsal per day) and inconsistent tool-call support.
-- Plan on a paid small model (e.g. `gpt-4o-mini`) or OpenRouter credits for rehearsal and
-  the demo. Temperature ~0.5–0.7 so trajectories differ between buyers without going erratic.
+### Model and provider (decided in Step 0)
+- **Mixed providers, one per agent role** — a Gemini free-tier key plus OpenRouter free
+  models, configured as per-role chains in `.env.example`. Gemini is a separate quota pool,
+  so it adds real headroom; its OpenAI-compatible endpoint means the existing `openai`
+  client works with a different `base_url`. The vendor mix is also a demo asset: each chat
+  bubble is badged with the model that produced it.
+- **Seller on the biggest pool.** The seller speaks in every thread — with 3 buyers it
+  makes about as many calls as all buyers combined (~19 of ~36 calls in a 6-round run).
+  Never split it across pools.
+- **Two OpenRouter free models probably don't double the quota** — free-tier caps are
+  (as far as we know) account-level, shared across all `:free` models. Verify with the
+  `/api/v1/key` call above. If the cap is low, a one-time OpenRouter credit top-up
+  (which raises free-model daily limits) is the cheapest reliability fix.
+- **Per-minute limits matter more than daily ones** with concurrent threads: pace calls
+  per provider (`*_RPM` in `.env`) and stagger thread starts.
+- **Moves are validated JSON, not native tool calling** — free models vary widely in
+  tool-call support; a malformed response is just an invalid move that bounces.
+- Recorded replay (section 2) is the demo-day safety net if any free tier is exhausted.
+- Temperature ~0.5–0.7 so trajectories differ between buyers without going erratic.
 
 ### Testing
 - Keep the existing deterministic engine as both the fallback and the default test path —
@@ -260,9 +261,7 @@ Highlight the traversal path in the UI when a buyer is selected.
 
 ## 4. Doc housekeeping (do alongside section 1)
 
-- `docs/AGENTS.md` §2 — still says the LLM only produces text; the negotiation output also
-  grows (tool calls, validator verdicts, events). This **is** a contract change: flag it to
-  the whole team before section 1 starts.
+- ~~`docs/AGENTS.md` §2 contract change~~ — done in Step 0.
 - `docs/PLAN.md` — the cut list still excludes the live step-by-step UI and real-time
   feeds; update it to reflect this plan.
 - `docs/LIMITATIONS.md:9` and `docs/ROUTES_DISTANCE_FIX.md:17` — still say

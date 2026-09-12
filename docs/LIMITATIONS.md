@@ -17,6 +17,11 @@ no shipment is booked, and an accepted simulation outcome is not a signed contra
 - CO2 output preserves the existing illustrative 0.85 t/t factor. It assumes 1:1
   clinker displacement for the cement scenario and excludes treatment/transport.
   It is not a validated LD-slag lifecycle factor and is not applicable to road aggregate.
+- Contract-length ranges (`contract_months_min/max` in `buyers.json` and `seller.json`)
+  are illustrative: buyer ranges are derived from demand tier, not researched terms.
+- Concurrent negotiations close at most one deal per run: threads reach agreed-pending,
+  the orchestrator selects one by total net value and releases the rest. Splitting the
+  seller's supply across several buyers (multi-buyer allocation) is out of scope.
 - BATNA compares modeled alternative margins per tonne. Final selection compares
   total values among the resulting eligible offers. This is not a global multi-buyer
   allocation optimizer; pending counteroffers can still be recommended.

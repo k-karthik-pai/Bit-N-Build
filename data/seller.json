@@ -7,5 +7,8 @@
   "available_quantity_tonnes_per_year": 100000,
   "min_acceptable_price_per_tonne_usd": 22,
   "preferred_price_per_tonne_usd": 25,
-  "current_disposal_cost_per_tonne_usd": 5
+  "current_disposal_cost_per_tonne_usd": 5,
+  "contract_months_min": 6,
+  "contract_months_max": 36,
+  "preferred_contract_months": 24
 }

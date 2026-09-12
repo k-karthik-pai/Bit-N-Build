@@ -10,6 +10,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 42
     },
+    "contract_months_min": 12,
+    "contract_months_max": 36,
     "is_real_reference": true,
     "source_note": "Real company (~6.0 MTPA, largest VRM in world) - shahcement.com; Superbrands 2020-22; TBS News Jan 2026. LD-slag demand/price illustrative."
   },
@@ -24,6 +26,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 40
     },
+    "contract_months_min": 12,
+    "contract_months_max": 36,
     "is_real_reference": true,
     "source_note": "Real company (5.7 MTPA, owns 2 ocean-going ships) - crowncement.com Annual Report 2023-24. LD-slag demand/price illustrative."
   },
@@ -38,6 +42,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 40
     },
+    "contract_months_min": 12,
+    "contract_months_max": 36,
     "is_real_reference": true,
     "source_note": "Real company (8.4 MTPA, Shun Shing Group) - LinkedIn; Trademo. LD-slag demand/price illustrative."
   },
@@ -52,6 +58,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 41
     },
+    "contract_months_min": 12,
+    "contract_months_max": 36,
     "is_real_reference": true,
     "source_note": "Real company (5.2 MTPA) - premiercement.com; bcma.com.bd; ~$48M clinker imports. LD-slag demand/price illustrative."
   },
@@ -66,6 +74,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 39
     },
+    "contract_months_min": 12,
+    "contract_months_max": 36,
     "is_real_reference": true,
     "source_note": "Real company (5.0 MTPA, Meghna Group) - bcma.com.bd; WCA. LD-slag demand/price illustrative."
   },
@@ -80,6 +90,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 42
     },
+    "contract_months_min": 12,
+    "contract_months_max": 36,
     "is_real_reference": true,
     "source_note": "Real company (5.05 MTPA, largest in Bangladesh, factory at Mongla Port Industrial Area) - bashundharacement.com; bcma.com.bd. LD-slag demand/price illustrative."
   },
@@ -94,6 +106,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 38
     },
+    "contract_months_min": 12,
+    "contract_months_max": 36,
     "is_real_reference": true,
     "source_note": "Real company (~2.0+ MTPA, PCC CEM-II/B-M S-L 72-79% clinker) - MarketInside; Trademo; ~$80M imports May25-Apr26. LD-slag demand/price illustrative."
   },
@@ -108,6 +122,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 40
     },
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": true,
     "source_note": "Real company (~1.5 MTPA, ScanCement/RubyCement brands, since 1998) - Annual Report 2024. LD-slag demand/price illustrative."
   },
@@ -120,6 +136,8 @@
     "annual_demand_tonnes": 22000,
     "max_acceptable_price_per_tonne_usd": 23,
     "min_quality_requirements": {},
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": true,
     "source_note": "Real company (1.35 MTPA) - bcma.com.bd; eximtradedata; imports clinker from Indonesia. LD-slag demand/price illustrative."
   },
@@ -132,6 +150,8 @@
     "annual_demand_tonnes": 12000,
     "max_acceptable_price_per_tonne_usd": 22,
     "min_quality_requirements": {},
+    "contract_months_min": 3,
+    "contract_months_max": 12,
     "is_real_reference": true,
     "source_note": "Real company (0.13 MTPA, one of earliest cement companies in BD, Jessore plant) - nitolniloy.com.bd. LD-slag demand/price illustrative."
   },
@@ -146,6 +166,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 38
     },
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": true,
     "source_note": "Real company (owns vessels for clinker import, capacity not disclosed in sources reviewed) - TBS News Jan 2026. Port assumed Chittagong (92% of BD trade); LD-slag demand/price illustrative."
   },
@@ -158,6 +180,8 @@
     "annual_demand_tonnes": 15000,
     "max_acceptable_price_per_tonne_usd": 22,
     "min_quality_requirements": {},
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": true,
     "source_note": "Real company, mentioned in industry sources reviewed; capacity/port not disclosed there. Port assumed Chittagong (92% of BD trade); LD-slag demand/price illustrative."
   },
@@ -170,6 +194,8 @@
     "annual_demand_tonnes": 15000,
     "max_acceptable_price_per_tonne_usd": 22,
     "min_quality_requirements": {},
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": true,
     "source_note": "Real company, mentioned in industry sources reviewed; capacity/port not disclosed there. Port assumed Chittagong (92% of BD trade); LD-slag demand/price illustrative."
   },
@@ -184,6 +210,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 37
     },
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -198,6 +226,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 44
     },
+    "contract_months_min": 3,
+    "contract_months_max": 12,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -212,6 +242,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 43
     },
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -226,6 +258,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 43
     },
+    "contract_months_min": 3,
+    "contract_months_max": 12,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -240,6 +274,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 35
     },
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -254,6 +290,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 38
     },
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -268,6 +306,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 40
     },
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -282,6 +322,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 36
     },
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -294,6 +336,8 @@
     "annual_demand_tonnes": 32000,
     "max_acceptable_price_per_tonne_usd": 21,
     "min_quality_requirements": {},
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -308,6 +352,8 @@
     "min_quality_requirements": {
       "CaO_min_pct": 38
     },
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -320,6 +366,8 @@
     "annual_demand_tonnes": 26000,
     "max_acceptable_price_per_tonne_usd": 21,
     "min_quality_requirements": {},
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   },
@@ -332,6 +380,8 @@
     "annual_demand_tonnes": 32000,
     "max_acceptable_price_per_tonne_usd": 24,
     "min_quality_requirements": {},
+    "contract_months_min": 6,
+    "contract_months_max": 24,
     "is_real_reference": false,
     "source_note": "synthetic, generated around real market anchors"
   }

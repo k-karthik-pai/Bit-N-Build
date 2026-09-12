@@ -14,9 +14,15 @@ it late is costly.
   "available_quantity_tonnes_per_year": 100000,
   "min_acceptable_price_per_tonne_usd": 22,
   "preferred_price_per_tonne_usd": 25,
-  "current_disposal_cost_per_tonne_usd": 0
+  "current_disposal_cost_per_tonne_usd": 0,
+  "contract_months_min": 6,
+  "contract_months_max": 36,
+  "preferred_contract_months": 24
 }
 ```
+`contract_months_*` added in Step 0 of `NEXT_STEPS.md` (schema change agreed by the team)
+so contract length can be negotiated and validated. Values are illustrative — see
+`LIMITATIONS.md`.
 
 ## materials.json (list)
 ```json
@@ -41,10 +47,17 @@ it late is costly.
   "annual_demand_tonnes": 0,
   "max_acceptable_price_per_tonne_usd": 0,
   "min_quality_requirements": {},
+  "contract_months_min": 6,
+  "contract_months_max": 24,
   "is_real_reference": true,
   "source_note": "string — cite where the name/anchor number came from, or 'synthetic, generated around real market anchors' if not"
 }
 ```
+`contract_months_min/max` (added in Step 0 of `NEXT_STEPS.md`) are derived from demand
+tier by `data/generate_buyers.py` — ≥40,000 t: 12–36, ≥15,000 t: 6–24, else 3–12. Every
+tier contains 12, the deterministic fallback's fixed term. Illustrative, not researched.
+Regenerate with `python3 data/generate_buyers.py`; never hand-edit `buyers.json` (a test
+asserts it matches the generator).
 
 ## ports.json (list)
 ```json

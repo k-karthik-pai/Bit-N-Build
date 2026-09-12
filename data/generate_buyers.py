@@ -220,9 +220,25 @@ def generate_synthetic_buyers(count: int, seed: int = 42) -> list[dict]:
     return synthetic
 
 
+def contract_months_range(annual_demand_tonnes: int) -> tuple[int, int]:
+    """
+    Acceptable contract length (months) by demand tier - illustrative, not
+    researched (see docs/LIMITATIONS.md). Larger buyers can commit to longer
+    offtake; smaller ones want shorter exposure. Derived from demand rather
+    than drawn from the seeded rng so existing generated values don't shift,
+    and every tier contains 12 (the negotiation fallback's fixed term).
+    """
+    if annual_demand_tonnes >= 40000:
+        return 12, 36
+    if annual_demand_tonnes >= 15000:
+        return 6, 24
+    return 3, 12
+
+
 def build_buyers() -> list[dict]:
     buyers = []
     for b in REAL_BUYERS:
+        months_min, months_max = contract_months_range(b["annual_demand_tonnes"])
         buyers.append({
             "buyer_id": b["buyer_id"],
             "name": b["name"],
@@ -232,10 +248,13 @@ def build_buyers() -> list[dict]:
             "annual_demand_tonnes": b["annual_demand_tonnes"],
             "max_acceptable_price_per_tonne_usd": b["max_acceptable_price_per_tonne_usd"],
             "min_quality_requirements": b["min_quality_requirements"],
+            "contract_months_min": months_min,
+            "contract_months_max": months_max,
             "is_real_reference": True,
             "source_note": b["source_note"],
         })
     for s in generate_synthetic_buyers(count=len(SYNTHETIC_NAMES)):
+        months_min, months_max = contract_months_range(s["annual_demand_tonnes"])
         buyers.append({
             "buyer_id": s["buyer_id"],
             "name": s["name"],
@@ -245,6 +264,8 @@ def build_buyers() -> list[dict]:
             "annual_demand_tonnes": s["annual_demand_tonnes"],
             "max_acceptable_price_per_tonne_usd": s["max_acceptable_price_per_tonne_usd"],
             "min_quality_requirements": s["min_quality_requirements"],
+            "contract_months_min": months_min,
+            "contract_months_max": months_max,
             "is_real_reference": False,
             "source_note": s["source_note"],
         })
