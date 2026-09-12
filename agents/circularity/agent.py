@@ -11,10 +11,13 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from .knowledge_graph import build_material_buyer_graph
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MATERIALS_PATH = REPOSITORY_ROOT / "data" / "materials.json"
 DEFAULT_BUYERS_PATH = REPOSITORY_ROOT / "data" / "buyers.json"
+DEFAULT_PORTS_PATH = REPOSITORY_ROOT / "data" / "ports.json"
 QUALITY_RULE_PATTERN = re.compile(
     r"^(?P<component>[A-Za-z][A-Za-z0-9]*)_(?P<operator>min|max)_pct$"
 )
@@ -130,6 +133,7 @@ def _validate_materials(materials: object) -> list[dict[str, Any]]:
         validated.append(
             {
                 "material_id": material_id,
+                "name": material.get("name", material_id),
                 "composition": validated_composition,
                 "applications": validated_applications,
             }
@@ -169,6 +173,8 @@ def _validate_buyers(buyers: object) -> list[dict[str, Any]]:
         validated.append(
             {
                 "buyer_id": buyer_id,
+                "name": buyer.get("name", buyer_id),
+                "port_id": _required_string(buyer, "port_id", context),
                 "material_required_id": material_required_id,
                 "annual_demand_tonnes": float(annual_demand),
                 "requirements": requirements,
@@ -196,68 +202,13 @@ def _validate_request(request: object) -> tuple[str, float, str]:
     return material_id, float(quantity), seller_id
 
 
-def _evaluate_requirements(
-    composition: Mapping[str, float], requirements: Mapping[str, float]
-) -> tuple[bool, list[str]]:
-    checks: list[str] = []
-    for rule, threshold in requirements.items():
-        match = QUALITY_RULE_PATTERN.fullmatch(rule)
-        if match is None:  # Requirements are validated before evaluation.
-            raise DataValidationError(f"unsupported quality rule {rule!r}")
-
-        component = match.group("component")
-        actual = composition.get(component)
-        if actual is None:
-            return False, checks
-
-        operator = match.group("operator")
-        passed = actual >= threshold if operator == "min" else actual <= threshold
-        symbol = ">=" if operator == "min" else "<="
-        checks.append(f"{component} {actual:g}% {symbol} {threshold:g}%")
-        if not passed:
-            return False, checks
-    return True, checks
-
-
-def _select_application(
-    material: Mapping[str, Any], buyer_requirements: Mapping[str, float]
-) -> tuple[str, list[str]] | None:
-    composition = material["composition"]
-    buyer_passed, buyer_checks = _evaluate_requirements(
-        composition, buyer_requirements
-    )
-    if not buyer_passed:
-        return None
-
-    best_match: tuple[str, list[str]] | None = None
-    best_specificity = -1
-    for application in material["applications"]:
-        application_passed, application_checks = _evaluate_requirements(
-            composition, application["requirements"]
-        )
-        if not application_passed:
-            continue
-
-        specificity = len(application["requirements"])
-        if specificity > best_specificity:
-            best_specificity = specificity
-            best_match = (
-                application["application"],
-                list(dict.fromkeys(application_checks + buyer_checks)),
-            )
-    return best_match
-
-
-def _format_tonnes(value: float) -> str:
-    return f"{value:,.0f}" if value.is_integer() else f"{value:,.2f}"
-
-
 def find_candidates(
     request: Mapping[str, Any],
     materials: Sequence[Mapping[str, Any]],
     buyers: Sequence[Mapping[str, Any]],
+    ports: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Return compatible buyers ranked by the share of requested demand they absorb."""
+    """Return compatible buyers by traversing the material–buyer graph."""
 
     material_id, quantity, _seller_id = _validate_request(request)
     validated_materials = _validate_materials(materials)
@@ -274,46 +225,8 @@ def find_candidates(
     if material is None:
         raise RequestValidationError(f"material_id {material_id!r} was not found")
 
-    candidates: list[dict[str, Any]] = []
-    for buyer in validated_buyers:
-        if buyer["material_required_id"] != material_id:
-            continue
-        if buyer["annual_demand_tonnes"] <= 0:
-            continue
-
-        application_match = _select_application(material, buyer["requirements"])
-        if application_match is None:
-            continue
-        application, quality_checks = application_match
-
-        covered_tonnes = min(buyer["annual_demand_tonnes"], quantity)
-        compatibility_score = round(covered_tonnes / quantity, 4)
-        quality_note = (
-            "; quality verified: " + ", ".join(quality_checks)
-            if quality_checks
-            else "; no numeric quality constraints supplied"
-        )
-        notes = (
-            f"Application {application}{quality_note}; demand coverage "
-            f"{compatibility_score * 100:.2f}% "
-            f"({_format_tonnes(covered_tonnes)} of {_format_tonnes(quantity)} tonnes)."
-        )
-        candidates.append(
-            {
-                "buyer_id": buyer["buyer_id"],
-                "application": application,
-                "compatibility_score": compatibility_score,
-                "notes": notes,
-            }
-        )
-
-    candidates.sort(
-        key=lambda candidate: (
-            -candidate["compatibility_score"],
-            candidate["buyer_id"],
-        )
-    )
-    return {"candidates": candidates}
+    graph = build_material_buyer_graph(validated_materials, validated_buyers, ports)
+    return graph.match(material_id, quantity)
 
 
 def _load_json(path: str | Path, dataset_name: str) -> Any:
@@ -340,22 +253,25 @@ def run_from_files(
     request: Mapping[str, Any],
     materials_path: str | Path = DEFAULT_MATERIALS_PATH,
     buyers_path: str | Path = DEFAULT_BUYERS_PATH,
+    ports_path: str | Path = DEFAULT_PORTS_PATH,
 ) -> dict[str, list[dict[str, Any]]]:
     """Load datasets and execute matching using the frozen request contract."""
 
     materials = _load_json(materials_path, "materials")
     buyers = _load_json(buyers_path, "buyers")
-    return find_candidates(request, materials, buyers)
+    ports = _load_json(ports_path, "ports")
+    return find_candidates(request, materials, buyers, ports)
 
 
 def run_circularity(
     request: Mapping[str, Any],
     materials_path: str | Path = DEFAULT_MATERIALS_PATH,
     buyers_path: str | Path = DEFAULT_BUYERS_PATH,
+    ports_path: str | Path = DEFAULT_PORTS_PATH,
 ) -> dict[str, list[dict[str, Any]]]:
     """Contract-compatible alias for orchestrator wiring."""
 
-    return run_from_files(request, materials_path, buyers_path)
+    return run_from_files(request, materials_path, buyers_path, ports_path)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -367,6 +283,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seller-id", required=True)
     parser.add_argument("--materials", default=str(DEFAULT_MATERIALS_PATH))
     parser.add_argument("--buyers", default=str(DEFAULT_BUYERS_PATH))
+    parser.add_argument("--ports", default=str(DEFAULT_PORTS_PATH))
     return parser
 
 
@@ -379,7 +296,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "seller_id": arguments.seller_id,
     }
     try:
-        result = run_from_files(request, arguments.materials, arguments.buyers)
+        result = run_from_files(
+            request, arguments.materials, arguments.buyers, arguments.ports
+        )
     except CircularityError as error:
         print(f"circularity agent error: {error}", file=sys.stderr)
         return 1
