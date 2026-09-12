@@ -37,11 +37,11 @@ def _load_json(filename: str) -> Any:
 
 
 def _get_route(logistics: Dict[str, Any], route_id: str) -> Dict[str, Any]:
-    """Look up a route dict by route_id (falls back to routes[0] if not found)."""
+    """Look up a route dict by route_id and reject inconsistent responses."""
     for route in logistics["routes"]:
         if route["route_id"] == route_id:
             return route
-    return logistics["routes"][0]
+    raise ValueError(f"Recommended route '{route_id}' is missing from logistics response")
 
 # ---------------------------------------------------------------------------
 # Step 1: Circularity / Matching Agent (simplified — stub with real data)
@@ -282,7 +282,7 @@ def run_pipeline(
     price = deal["price_per_tonne_usd"]
     logistics_cost = route["cost_per_tonne_usd"]
     margin = round(price - logistics_cost - HANDLING_COST_PER_TONNE_USD - PROCESSING_COST_PER_TONNE_USD, 2)
-    total_net_value = round(margin * buyer["annual_demand_tonnes"], 2)
+    total_net_value = round(margin * deal["quantity_tonnes"], 2)
 
     result = {
         "material": material_id,
