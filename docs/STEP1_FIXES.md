@@ -1,6 +1,6 @@
 # STEP1_FIXES.md — review findings for the Step 1 negotiation work
 
-## Round 5 (2026-09-12) — OPEN, handed to the team
+## Round 5 (2026-09-12) — implemented on `codex/final-integration`
 
 Steps 2 and 3 are merged into `main` (`6a44cbe`). R5-1…R5-3 below are tracked for the
 team in **`docs/HANDOFF_INTEGRATION.md`** (fixes 3, 1, 2 there) — work from that file.

@@ -12,6 +12,7 @@ from typing import Literal
 from fastapi import FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 from demo.coordinator import DEFAULT_SAMPLE, PROJECT_ROOT, RunBusyError, RunCoordinator
@@ -21,11 +22,12 @@ from orchestrator import FIXED_SCENARIO
 
 
 PUBLIC_DIR = Path(__file__).resolve().parent / "static"
+load_dotenv(override=False)
 
 
 class RunRequest(BaseModel):
     mode: Literal["live", "replay"] = "replay"
-    top_n: int = Field(default=3, ge=1, le=5)
+    top_n: int = Field(default=3, ge=3, le=5)
     replay_file: str | None = None
     replay_speed: float | None = Field(default=None, ge=0.1, le=1000)
 
@@ -199,7 +201,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--runs-dir", default=os.getenv("RUNS_DIR", str(PROJECT_ROOT / "runs")))
     parser.add_argument("--replay", metavar="JSONL", help="auto-start a validated recording in the UI")
     parser.add_argument("--log-level", default=os.getenv("LOG_LEVEL", "info"))
+    parser.add_argument("--env-file", help="Optional dotenv file; existing environment variables take precedence")
     args = parser.parse_args(argv)
+
+    if args.env_file:
+        env_path = Path(args.env_file)
+        if not env_path.is_file():
+            parser.error(f"environment file not found: {env_path}")
+        load_dotenv(env_path, override=False)
 
     import uvicorn
 

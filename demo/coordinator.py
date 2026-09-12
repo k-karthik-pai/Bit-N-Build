@@ -27,10 +27,13 @@ def utc_timestamp() -> str:
 
 def _safe_error(exc: BaseException) -> str:
     message = str(exc).strip() or type(exc).__name__
-    for name in ("GEMINI_API_KEY", "OPENROUTER_API_KEY", "OPENAI_API_KEY", "LLM_API_KEY"):
-        secret = os.getenv(name)
-        if secret:
-            message = message.replace(secret, "[redacted]")
+    secrets = {
+        value
+        for name, value in os.environ.items()
+        if name.endswith("_API_KEY") and value
+    }
+    for secret in sorted(secrets, key=len, reverse=True):
+        message = message.replace(secret, "[redacted]")
     return message[:1000]
 
 
@@ -92,8 +95,8 @@ class RunCoordinator:
             self._active_run_id = run_id
 
     def create_live(self, *, top_n: int = 3) -> dict[str, Any]:
-        if isinstance(top_n, bool) or not isinstance(top_n, int) or not 1 <= top_n <= 5:
-            raise ValueError("top_n must be an integer from 1 to 5")
+        if isinstance(top_n, bool) or not isinstance(top_n, int) or not 3 <= top_n <= 5:
+            raise ValueError("top_n must be an integer from 3 to 5")
         run_id = self._new_run_id()
         self._claim(run_id)
         metadata = {
@@ -241,7 +244,7 @@ class RunCoordinator:
         runner = getattr(orchestrator, "run_multi_agent", None)
         if not callable(runner):
             raise RuntimeError(
-                "Live multi-agent runtime is not available yet; use Replay Sample until Part 1 exposes orchestrator.run_multi_agent"
+                "Live multi-agent runtime is unavailable; use Replay Sample and verify the orchestrator installation"
             )
         return runner
 

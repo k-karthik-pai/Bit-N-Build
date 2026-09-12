@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .env
+/env
 .venv/
 runs/
 venv/
@@ -10,5 +11,4 @@ venv/
 # graphify code graph (generated locally; regenerate with `graphify update .`)
 graphify-out/
 
-# Live demo recordings (generated locally or on the deployment host)
-runs/
+# Live demo recordings are generated locally or on the deployment host.

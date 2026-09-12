@@ -152,19 +152,33 @@ def format_event(event: Dict[str, Any]) -> str:
 
 def main(argv=None) -> int:
     import argparse
+    from pathlib import Path
+
+    from dotenv import load_dotenv
     from orchestrator import run_pipeline
 
     parser = argparse.ArgumentParser(description="Render demo recommendation")
     parser.add_argument("--live", action="store_true", help="Run live LLM negotiations with streaming events (requires API keys)")
-    parser.add_argument("--top-n", type=int, default=3, help="Number of concurrent buyers (3-5)")
+    parser.add_argument("--top-n", type=int, choices=range(3, 6), default=3, help="Number of concurrent buyers (3-5)")
+    parser.add_argument(
+        "--record",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Write live events to runs/<run_id>.jsonl (default: enabled)",
+    )
+    parser.add_argument("--env-file", help="Optional dotenv file; existing environment variables take precedence")
     if argv is None:
         args, _ = parser.parse_known_args()
     else:
         args, _ = parser.parse_known_args(argv)
 
     try:
+        if args.env_file:
+            env_path = Path(args.env_file)
+            if not env_path.is_file():
+                raise OSError(f"Environment file not found: {env_path}")
+            load_dotenv(env_path, override=False)
         if args.live:
-            top_n = max(3, min(5, args.top_n))
             events = []
             def emit(ev):
                 events.append(ev)
@@ -172,7 +186,13 @@ def main(argv=None) -> int:
                 if line:
                     print(line, flush=True)
             # also show legacy progress for compatibility
-            result = run_pipeline(use_llm=True, top_n=top_n, emit_event=emit, on_progress=show_progress)
+            result = run_pipeline(
+                use_llm=True,
+                top_n=args.top_n,
+                emit_event=emit,
+                on_progress=show_progress,
+                record=args.record,
+            )
             print("\n" + render(result, include_log=False))
             print(f"\nRecorded {len(events)} events to runs/<run_id>.jsonl", file=sys.stderr)
         else:

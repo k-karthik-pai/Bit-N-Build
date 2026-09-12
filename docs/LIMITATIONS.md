@@ -5,9 +5,9 @@ no shipment is booked, and an accepted simulation outcome is not a signed contra
 
 - `is_real_reference` identifies a real-reference company name, not verified
   willingness to buy LD slag. Individual prices and quantities are illustrative.
-- Source notes exist in `buyers.json`. The research document previously referenced
-  as `data/RESEARCH_FINDINGS.md` was not committed. Aggregate price derivation and
-  freight benchmarks cannot be independently reconstructed from this repo.
+- Source notes exist in `buyers.json`, and the committed `data/RESEARCH_FINDINGS.md`
+  records the aggregate price and freight anchors. Individual commercial terms remain
+  modeled inputs rather than verified buyer quotations.
 - Dhamra route distances have recorded calculator lookups in
   `ROUTES_DISTANCE_FIX.md`; the 250 km inter-port links lack equivalent evidence.
 - Transit time is modeled sailing time plus intermediate-port processing. It excludes

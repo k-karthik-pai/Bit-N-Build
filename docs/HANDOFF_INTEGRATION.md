@@ -1,27 +1,25 @@
-# HANDOFF_INTEGRATION.md — remaining fixes after merging Steps 1–3
+# HANDOFF_INTEGRATION.md — final integration fixes after merging Steps 1–3
 
-Status as of 2026-09-12 (`main` @ `6a44cbe`): Step 1 (multi-agent LLM negotiation), Step 2
-(live streaming dashboard) and Step 3 (knowledge-graph matching) are merged. **88 tests
-pass** (network-blocked). Three fixes remain before the dashboard can show a live
-negotiation. Each is small and independent; pick one, put your name next to it, and open a
-PR (or push to `main` if that's what the team is doing — tell the others either way).
+Status as of 2026-09-12: Steps 1–3 are merged. The three fixes documented below were
+implemented together on `codex/final-integration`; keep this file as the evidence and
+acceptance checklist for the final review.
 
-| # | Fix | Size | Suggested owner | Blocks |
-|---|---|---|---|---|
-| 1 | Event timestamps → milliseconds | ~1 line + test | anyone | dashboard live mode |
-| 2 | `orchestrator.run_multi_agent` adapter + single recording | ~15 lines + test | Step 2 owner (knows the coordinator) | dashboard live mode |
-| 3 | Seller fallback must not retract a concession | ~20 lines + tests | Step 1 owner | demo credibility |
+| # | Fix | Status | Blocks |
+|---|---|---|---|
+| 1 | Event timestamps → milliseconds | Implemented | dashboard live mode |
+| 2 | `orchestrator.run_multi_agent` adapter + single recording | Implemented | dashboard live mode |
+| 3 | Seller fallback must not retract a concession | Implemented | demo credibility |
 
-Do **1 before 2** (2's test will fail on timestamps otherwise). 3 is independent.
+Offline regression and live presentation verification remain the final gates.
 
 ---
 
 ## Setup (once)
 
-```sh
-python -m venv .venv && .venv/bin/pip install -r requirements.txt pytest
-cp .env.example .env        # then paste your own keys; never commit .env
-.venv/bin/python -m pytest -q
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python -m unittest discover -s tests -v
 ```
 
 - Tests are fully offline — they blank provider keys and fail loudly on any network call.
@@ -35,10 +33,10 @@ cp .env.example .env        # then paste your own keys; never commit .env
 
 Useful commands:
 
-```sh
-.venv/bin/python -m orchestrator.run --live --top-n 3     # live multi-agent run, events to stderr (spends API quota)
-.venv/bin/python -m demo.web --replay demo/sample_run.jsonl  # dashboard replay at http://127.0.0.1:8000
-.venv/bin/python -m demo.web                                 # dashboard; "Live" needs fixes 1 + 2
+```powershell
+.\.venv\Scripts\python -m orchestrator.run --live --top-n 3 --env-file env
+.\.venv\Scripts\python -m demo.web --replay demo/sample_run.jsonl
+.\.venv\Scripts\python -m demo.web --env-file env
 ```
 
 ---
@@ -141,3 +139,13 @@ unless the floor forced it; a buyer fallback never below its previous bid.
   $26.90/t × 65,000 t (net $1,066,000), Crown accepted then released, Seven Circle
   rejected (its $26 ceiling was below the floor set by Shah's live bid — correct).
 - Full review history: `docs/STEP1_FIXES.md` (Rounds 1–5).
+
+## Final verification
+
+- 92 offline tests passed with every provider key/chain blank and network proxies blocked.
+- Browser replay completed all 36 reference events with no console warnings or errors.
+- One live top-three dashboard run completed as `run-20260912-165624-a181c4c4`:
+  35 unique ordered events, 18 LLM moves, 2 validator bounces and 2 visible fallbacks.
+- Shah Cement won at $26.25/t for 65,000 t; the verified total net value was $1,023,750.
+- The recording passed `demo.events.validate_run`, recommendation arithmetic matched, and
+  no credential value appeared in the recording.
