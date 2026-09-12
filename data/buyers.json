@@ -1,62 +1,338 @@
 [
   {
-    "buyer_id": "stub_buyer_1",
-    "name": "Stub Cement Co. 1",
+    "buyer_id": "shah_cement",
+    "name": "Shah Cement Industries Ltd",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 65000,
+    "max_acceptable_price_per_tonne_usd": 28,
+    "min_quality_requirements": {
+      "CaO_min_pct": 42
+    },
+    "is_real_reference": true,
+    "source_note": "Real company (~6.0 MTPA, largest VRM in world) - shahcement.com; Superbrands 2020-22; TBS News Jan 2026. LD-slag demand/price illustrative."
+  },
+  {
+    "buyer_id": "crown_cement",
+    "name": "Crown Cement PLC",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 60000,
+    "max_acceptable_price_per_tonne_usd": 27,
+    "min_quality_requirements": {
+      "CaO_min_pct": 40
+    },
+    "is_real_reference": true,
+    "source_note": "Real company (5.7 MTPA, owns 2 ocean-going ships) - crowncement.com Annual Report 2023-24. LD-slag demand/price illustrative."
+  },
+  {
+    "buyer_id": "seven_circle",
+    "name": "Seven Circle Bangladesh Ltd",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 58000,
+    "max_acceptable_price_per_tonne_usd": 26,
+    "min_quality_requirements": {
+      "CaO_min_pct": 40
+    },
+    "is_real_reference": true,
+    "source_note": "Real company (8.4 MTPA, Shun Shing Group) - LinkedIn; Trademo. LD-slag demand/price illustrative."
+  },
+  {
+    "buyer_id": "premier_cement",
+    "name": "Premier Cement Mills PLC",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 52000,
+    "max_acceptable_price_per_tonne_usd": 27,
+    "min_quality_requirements": {
+      "CaO_min_pct": 41
+    },
+    "is_real_reference": true,
+    "source_note": "Real company (5.2 MTPA) - premiercement.com; bcma.com.bd; ~$48M clinker imports. LD-slag demand/price illustrative."
+  },
+  {
+    "buyer_id": "unique_cement",
+    "name": "Unique Cement Industries Ltd",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 48000,
+    "max_acceptable_price_per_tonne_usd": 25,
+    "min_quality_requirements": {
+      "CaO_min_pct": 39
+    },
+    "is_real_reference": true,
+    "source_note": "Real company (5.0 MTPA, Meghna Group) - bcma.com.bd; WCA. LD-slag demand/price illustrative."
+  },
+  {
+    "buyer_id": "bashundhara_cement",
+    "name": "Bashundhara Cement",
+    "country": "Bangladesh",
+    "port_id": "mongla",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 50000,
+    "max_acceptable_price_per_tonne_usd": 29,
+    "min_quality_requirements": {
+      "CaO_min_pct": 42
+    },
+    "is_real_reference": true,
+    "source_note": "Real company (5.05 MTPA, largest in Bangladesh, factory at Mongla Port Industrial Area) - bashundharacement.com; bcma.com.bd. LD-slag demand/price illustrative."
+  },
+  {
+    "buyer_id": "akij_cement",
+    "name": "Akij Cement Company Ltd",
     "country": "Bangladesh",
     "port_id": "chittagong",
     "material_required_id": "ld_slag",
     "annual_demand_tonnes": 40000,
-    "max_acceptable_price_per_tonne_usd": 26,
-    "min_quality_requirements": {"CaO_min_pct": 40},
-    "is_real_reference": false,
-    "source_note": "STUB placeholder for schema/dev testing only - Track A to replace with real dataset"
+    "max_acceptable_price_per_tonne_usd": 24,
+    "min_quality_requirements": {
+      "CaO_min_pct": 38
+    },
+    "is_real_reference": true,
+    "source_note": "Real company (~2.0+ MTPA, PCC CEM-II/B-M S-L 72-79% clinker) - MarketInside; Trademo; ~$80M imports May25-Apr26. LD-slag demand/price illustrative."
   },
   {
-    "buyer_id": "stub_buyer_2",
-    "name": "Stub Cement Co. 2",
+    "buyer_id": "heidelberg_bd",
+    "name": "Heidelberg Materials Bangladesh PLC",
     "country": "Bangladesh",
     "port_id": "chittagong",
     "material_required_id": "ld_slag",
-    "annual_demand_tonnes": 25000,
-    "max_acceptable_price_per_tonne_usd": 24,
-    "min_quality_requirements": {"CaO_min_pct": 38},
-    "is_real_reference": false,
-    "source_note": "STUB placeholder for schema/dev testing only - Track A to replace with real dataset"
+    "annual_demand_tonnes": 30000,
+    "max_acceptable_price_per_tonne_usd": 26,
+    "min_quality_requirements": {
+      "CaO_min_pct": 40
+    },
+    "is_real_reference": true,
+    "source_note": "Real company (~1.5 MTPA, ScanCement/RubyCement brands, since 1998) - Annual Report 2024. LD-slag demand/price illustrative."
   },
   {
-    "buyer_id": "stub_buyer_3",
-    "name": "Stub Cement Co. 3",
+    "buyer_id": "diamond_cement",
+    "name": "Diamond Cement Ltd",
     "country": "Bangladesh",
-    "port_id": "mongla",
+    "port_id": "chittagong",
     "material_required_id": "ld_slag",
-    "annual_demand_tonnes": 60000,
-    "max_acceptable_price_per_tonne_usd": 28,
-    "min_quality_requirements": {"CaO_min_pct": 42},
-    "is_real_reference": false,
-    "source_note": "STUB placeholder for schema/dev testing only - Track A to replace with real dataset"
-  },
-  {
-    "buyer_id": "stub_buyer_4",
-    "name": "Stub Cement Co. 4",
-    "country": "Bangladesh",
-    "port_id": "mongla",
-    "material_required_id": "ld_slag",
-    "annual_demand_tonnes": 15000,
+    "annual_demand_tonnes": 22000,
     "max_acceptable_price_per_tonne_usd": 23,
     "min_quality_requirements": {},
-    "is_real_reference": false,
-    "source_note": "STUB placeholder for schema/dev testing only - Track A to replace with real dataset"
+    "is_real_reference": true,
+    "source_note": "Real company (1.35 MTPA) - bcma.com.bd; eximtradedata; imports clinker from Indonesia. LD-slag demand/price illustrative."
   },
   {
-    "buyer_id": "stub_buyer_5",
-    "name": "Stub Cement Co. 5",
+    "buyer_id": "nitol_cement",
+    "name": "Nitol Cement Industries Ltd",
+    "country": "Bangladesh",
+    "port_id": "mongla",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 12000,
+    "max_acceptable_price_per_tonne_usd": 22,
+    "min_quality_requirements": {},
+    "is_real_reference": true,
+    "source_note": "Real company (0.13 MTPA, one of earliest cement companies in BD, Jessore plant) - nitolniloy.com.bd. LD-slag demand/price illustrative."
+  },
+  {
+    "buyer_id": "metrocem_group",
+    "name": "Metrocem Group",
     "country": "Bangladesh",
     "port_id": "chittagong",
     "material_required_id": "ld_slag",
-    "annual_demand_tonnes": 50000,
-    "max_acceptable_price_per_tonne_usd": 27,
-    "min_quality_requirements": {"CaO_min_pct": 41},
+    "annual_demand_tonnes": 20000,
+    "max_acceptable_price_per_tonne_usd": 24,
+    "min_quality_requirements": {
+      "CaO_min_pct": 38
+    },
+    "is_real_reference": true,
+    "source_note": "Real company (owns vessels for clinker import, capacity not disclosed in sources reviewed) - TBS News Jan 2026. Port assumed Chittagong (92% of BD trade); LD-slag demand/price illustrative."
+  },
+  {
+    "buyer_id": "shamim_cement",
+    "name": "Shamim Cement",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 15000,
+    "max_acceptable_price_per_tonne_usd": 22,
+    "min_quality_requirements": {},
+    "is_real_reference": true,
+    "source_note": "Real company, mentioned in industry sources reviewed; capacity/port not disclosed there. Port assumed Chittagong (92% of BD trade); LD-slag demand/price illustrative."
+  },
+  {
+    "buyer_id": "kds_cement",
+    "name": "KDS Cement",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 15000,
+    "max_acceptable_price_per_tonne_usd": 22,
+    "min_quality_requirements": {},
+    "is_real_reference": true,
+    "source_note": "Real company, mentioned in industry sources reviewed; capacity/port not disclosed there. Port assumed Chittagong (92% of BD trade); LD-slag demand/price illustrative."
+  },
+  {
+    "buyer_id": "synth_buyer_1",
+    "name": "Padma Valley Cement Ltd",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 15000,
+    "max_acceptable_price_per_tonne_usd": 20,
+    "min_quality_requirements": {
+      "CaO_min_pct": 37
+    },
     "is_real_reference": false,
-    "source_note": "STUB placeholder for schema/dev testing only - Track A to replace with real dataset"
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_2",
+    "name": "Meghna Delta Building Materials",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 14000,
+    "max_acceptable_price_per_tonne_usd": 30,
+    "min_quality_requirements": {
+      "CaO_min_pct": 44
+    },
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_3",
+    "name": "Sundarban Cement Works",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 35000,
+    "max_acceptable_price_per_tonne_usd": 20,
+    "min_quality_requirements": {
+      "CaO_min_pct": 43
+    },
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_4",
+    "name": "Jamuna Ridge Cement Co.",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 9000,
+    "max_acceptable_price_per_tonne_usd": 28,
+    "min_quality_requirements": {
+      "CaO_min_pct": 43
+    },
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_5",
+    "name": "Karnaphuli Industrial Cement",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 34000,
+    "max_acceptable_price_per_tonne_usd": 23,
+    "min_quality_requirements": {
+      "CaO_min_pct": 35
+    },
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_6",
+    "name": "Green Bengal Cement Ltd",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 18000,
+    "max_acceptable_price_per_tonne_usd": 31,
+    "min_quality_requirements": {
+      "CaO_min_pct": 38
+    },
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_7",
+    "name": "Sylhet Highland Cement",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 29000,
+    "max_acceptable_price_per_tonne_usd": 21,
+    "min_quality_requirements": {
+      "CaO_min_pct": 40
+    },
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_8",
+    "name": "Rupsha River Cement Mills",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 24000,
+    "max_acceptable_price_per_tonne_usd": 32,
+    "min_quality_requirements": {
+      "CaO_min_pct": 36
+    },
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_9",
+    "name": "Padma Bridge Cement Corp",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 32000,
+    "max_acceptable_price_per_tonne_usd": 21,
+    "min_quality_requirements": {},
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_10",
+    "name": "Barisal Coastal Cement Ltd",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 31000,
+    "max_acceptable_price_per_tonne_usd": 29,
+    "min_quality_requirements": {
+      "CaO_min_pct": 38
+    },
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_11",
+    "name": "Dhaka Metro Cement Industries",
+    "country": "Bangladesh",
+    "port_id": "mongla",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 26000,
+    "max_acceptable_price_per_tonne_usd": 21,
+    "min_quality_requirements": {},
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
+  },
+  {
+    "buyer_id": "synth_buyer_12",
+    "name": "Chattogram Bay Cement Ltd",
+    "country": "Bangladesh",
+    "port_id": "chittagong",
+    "material_required_id": "ld_slag",
+    "annual_demand_tonnes": 32000,
+    "max_acceptable_price_per_tonne_usd": 24,
+    "min_quality_requirements": {},
+    "is_real_reference": false,
+    "source_note": "synthetic, generated around real market anchors"
   }
 ]

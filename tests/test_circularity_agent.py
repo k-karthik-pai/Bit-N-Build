@@ -60,23 +60,51 @@ class CircularityAgentTests(unittest.TestCase):
         "seller_id": "seller_1",
     }
 
-    def test_committed_stub_is_ranked_by_demand_fit(self) -> None:
+    def test_committed_dataset_is_ranked_by_demand_fit(self) -> None:
+        # data/buyers.json is the real dataset (13 real-anchor + 12 synthetic
+        # entries, see data/generate_buyers.py) generated deterministically
+        # (fixed random seed), so this ranking is stable across regenerations.
         result = run_circularity(self.request)
 
         self.assertEqual(
             [candidate["buyer_id"] for candidate in result["candidates"]],
             [
-                "stub_buyer_3",
-                "stub_buyer_5",
-                "stub_buyer_1",
-                "stub_buyer_2",
-                "stub_buyer_4",
+                "shah_cement",
+                "crown_cement",
+                "seven_circle",
+                "premier_cement",
+                "bashundhara_cement",
+                "unique_cement",
+                "akij_cement",
+                "synth_buyer_3",
+                "synth_buyer_5",
+                "synth_buyer_12",
+                "synth_buyer_9",
+                "synth_buyer_10",
+                "heidelberg_bd",
+                "synth_buyer_7",
+                "synth_buyer_11",
+                "synth_buyer_8",
+                "diamond_cement",
+                "metrocem_group",
+                "synth_buyer_6",
+                "kds_cement",
+                "shamim_cement",
+                "synth_buyer_1",
+                "synth_buyer_2",
+                "nitol_cement",
+                "synth_buyer_4",
             ],
         )
         self.assertEqual(
             [candidate["compatibility_score"] for candidate in result["candidates"]],
-            [0.6, 0.5, 0.4, 0.25, 0.15],
+            [
+                0.65, 0.6, 0.58, 0.52, 0.5, 0.48, 0.4, 0.35, 0.34, 0.32, 0.32,
+                0.31, 0.3, 0.29, 0.26, 0.24, 0.22, 0.2, 0.18, 0.15, 0.15, 0.15,
+                0.14, 0.12, 0.09,
+            ],
         )
+        self.assertEqual(len(result["candidates"]), 25)
         for candidate in result["candidates"]:
             self.assertEqual(
                 set(candidate),
