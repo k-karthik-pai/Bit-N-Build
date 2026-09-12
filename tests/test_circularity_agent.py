@@ -11,11 +11,9 @@ from agents.circularity import (
     DataValidationError,
     RequestValidationError,
     find_candidates,
+    run_circularity,
     run_from_files,
 )
-
-
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 def material(
@@ -63,11 +61,7 @@ class CircularityAgentTests(unittest.TestCase):
     }
 
     def test_committed_stub_is_ranked_by_demand_fit(self) -> None:
-        result = run_from_files(
-            self.request,
-            REPOSITORY_ROOT / "data" / "materials.json",
-            REPOSITORY_ROOT / "data" / "buyers.json",
-        )
+        result = run_circularity(self.request)
 
         self.assertEqual(
             [candidate["buyer_id"] for candidate in result["candidates"]],
@@ -211,6 +205,17 @@ class CircularityAgentTests(unittest.TestCase):
         invalid_material = material(composition={"CaO": float("nan")})
         with self.assertRaisesRegex(DataValidationError, "composition_pct.CaO"):
             find_candidates(self.request, [invalid_material], [])
+
+        impossible_material = material(composition={"CaO": 101})
+        with self.assertRaisesRegex(DataValidationError, "between 0 and 100"):
+            find_candidates(self.request, [impossible_material], [])
+
+        with self.assertRaisesRegex(DataValidationError, "between 0 and 100"):
+            find_candidates(
+                self.request,
+                [material()],
+                [buyer("invalid_threshold", 1, {"CaO_min_pct": -1})],
+            )
 
     def test_unsupported_quality_rule_fails_clearly(self) -> None:
         with self.assertRaisesRegex(DataValidationError, "unsupported quality rule"):

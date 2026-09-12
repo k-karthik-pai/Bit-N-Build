@@ -5,6 +5,7 @@ from .agent import (
     DataValidationError,
     RequestValidationError,
     find_candidates,
+    run_circularity,
     run_from_files,
 )
 
@@ -13,5 +14,6 @@ __all__ = [
     "DataValidationError",
     "RequestValidationError",
     "find_candidates",
+    "run_circularity",
     "run_from_files",
 ]

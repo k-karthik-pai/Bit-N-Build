@@ -10,12 +10,13 @@ The command reads `data/materials.json` and `data/buyers.json` by default and wr
 JSON output contract from `docs/AGENTS.md` to standard output. Use `--materials` and
 `--buyers` to provide alternate schema-compatible datasets.
 
-Import `find_candidates` for in-memory data or `run_from_files` for file-backed data:
+Import `find_candidates` for in-memory data or `run_circularity` for the default
+file-backed integration entry point:
 
 ```python
-from agents.circularity import run_from_files
+from agents.circularity import run_circularity
 
-result = run_from_files(
+result = run_circularity(
     {
         "material_id": "ld_slag",
         "quantity_tonnes": 100000,

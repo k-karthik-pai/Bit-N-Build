@@ -60,7 +60,12 @@ def _validate_requirements(requirements: object, context: str) -> dict[str, floa
             )
         if not _is_number(threshold):
             raise DataValidationError(f"{context}.{rule} must be a finite number")
-        validated[rule] = float(threshold)
+        numeric_threshold = float(threshold)
+        if not 0 <= numeric_threshold <= 100:
+            raise DataValidationError(
+                f"{context}.{rule} must be between 0 and 100 percent"
+            )
+        validated[rule] = numeric_threshold
     return validated
 
 
@@ -93,7 +98,13 @@ def _validate_materials(materials: object) -> list[dict[str, Any]]:
                 raise DataValidationError(
                     f"{context}.composition_pct.{component} must be a finite number"
                 )
-            validated_composition[component] = float(percentage)
+            numeric_percentage = float(percentage)
+            if not 0 <= numeric_percentage <= 100:
+                raise DataValidationError(
+                    f"{context}.composition_pct.{component} must be between "
+                    "0 and 100 percent"
+                )
+            validated_composition[component] = numeric_percentage
 
         applications = material.get("applications")
         if not isinstance(applications, list):
@@ -338,6 +349,16 @@ def run_from_files(
     materials = _load_json(materials_path, "materials")
     buyers = _load_json(buyers_path, "buyers")
     return find_candidates(request, materials, buyers)
+
+
+def run_circularity(
+    request: Mapping[str, Any],
+    materials_path: str | Path = DEFAULT_MATERIALS_PATH,
+    buyers_path: str | Path = DEFAULT_BUYERS_PATH,
+) -> dict[str, list[dict[str, Any]]]:
+    """Contract-compatible alias for orchestrator wiring."""
+
+    return run_from_files(request, materials_path, buyers_path)
 
 
 def _build_parser() -> argparse.ArgumentParser:
