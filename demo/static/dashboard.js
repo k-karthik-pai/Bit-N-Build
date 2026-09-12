@@ -11,10 +11,11 @@ const state = {
 };
 
 const el = id => document.getElementById(id);
-const money = value => Number.isFinite(Number(value))
+const hasNumber = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+const money = value => hasNumber(value)
   ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(Number(value))
   : "—";
-const number = value => Number.isFinite(Number(value)) ? new Intl.NumberFormat("en-US").format(Number(value)) : "—";
+const number = value => hasNumber(value) ? new Intl.NumberFormat("en-US").format(Number(value)) : "—";
 
 function setConnection(label, kind = "") {
   el("connectionText").textContent = label;
@@ -302,7 +303,9 @@ function handleEvent(event) {
       break;
     case "thread_result":
       setBuyerStatus(event.deal_id, p.status);
-      addSystem("Thread result", `${event.deal_id}: ${p.status} at ${money(p.price_per_tonne_usd)}/t`);
+      addSystem("Thread result", p.price_per_tonne_usd === null
+        ? `${event.deal_id}: ${p.status} — no deal`
+        : `${event.deal_id}: ${p.status} at ${money(p.price_per_tonne_usd)}/t`);
       break;
     case "released":
       setBuyerStatus(event.deal_id, "released");
