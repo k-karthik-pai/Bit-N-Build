@@ -2,6 +2,7 @@ services:
   - type: web
     name: circularity-agent-live-demo
     runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn demo.web:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /healthz
