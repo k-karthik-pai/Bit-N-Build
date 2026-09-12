@@ -1,6 +1,9 @@
 # STEP1_FIXES.md — review findings for the Step 1 negotiation work
 
-## Round 5 (2026-09-12) — OPEN, not yet fixed
+## Round 5 (2026-09-12) — OPEN, handed to the team
+
+Steps 2 and 3 are merged into `main` (`6a44cbe`). R5-1…R5-3 below are tracked for the
+team in **`docs/HANDOFF_INTEGRATION.md`** (fixes 3, 1, 2 there) — work from that file.
 
 Round 4 verified: 71 tests offline (2.7 s, proxy-blocked); live run `runs/run-e32f3cd7.jsonl`
 58 s, 20 LLM moves, 4 legitimate bounces, 2 fallbacks, **Shah accepted at $26.90/t ×
@@ -34,6 +37,43 @@ fallback never below its previous delivered bid.
 
 **Verify:** no live run needed — the offline tests cover it. Optionally re-check
 `run-e32f3cd7`'s scenario by replaying its moves as fake moves.
+
+### R5-2. Event timestamps violate EVENTS.md (blocks the Step 2 dashboard)
+
+`orchestrator/__init__.py:156` `_now_iso()` emits microseconds (`2026-09-12T16:06:41.107134Z`);
+`docs/EVENTS.md` requires "ISO-8601 UTC with milliseconds" (`…07.300Z`). The Step 2
+dashboard (`origin/codex/live-streaming-ui`, `demo/events.py`) enforces this and rejects
+every Step 1 event: `ts must contain exactly three millisecond digits`. Verified on a trial
+merge: with timestamps normalized to milliseconds, `runs/run-e32f3cd7.jsonl` and an offline
+concurrent run both pass the dashboard's `validate_run` — this is the only incompatibility.
+
+**Fix:** `datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")`
+(check for any other timestamp producers too). Add a test asserting every emitted `ts`
+matches `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$`, and extend `tests/helpers_events.py`
+with the same check.
+
+### R5-3. Adapter for the dashboard's live mode
+
+The dashboard's live mode calls `orchestrator.run_multi_agent(*, run_id, top_n, emit)` and
+requires every emitted event's `run_id` to equal the `run_id` it passed
+(`demo/coordinator.py` `_append`). Step 1 exposes `run_pipeline(use_llm=True,
+emit_event=..., top_n=..., run_id=...)`. Until an adapter exists, dashboard live mode ends
+in `run_failed` (replay mode works).
+
+**Fix (after merging the Step 2 branch into main):** add to `orchestrator/__init__.py`:
+
+```python
+def run_multi_agent(*, run_id: str, top_n: int, emit: Callable[[Dict[str, Any]], None]) -> Dict[str, Any]:
+    return run_pipeline(use_llm=True, top_n=top_n, run_id=run_id, emit_event=emit)
+```
+
+and export it. **Check double recording:** the orchestrator writes `runs/<run_id>.jsonl`
+itself, and the dashboard's `RunStore` also writes `<RUNS_DIR>/<run_id>.jsonl` — with the
+same `run_id` and `RUNS_DIR=runs` they would append to the **same file** (duplicate
+events). Give `run_pipeline` a `record: bool = True` parameter and pass `record=False`
+from the adapter (the dashboard owns recording in that path). Test with the dashboard's
+`TestClient`: start a live run with a fake runner-level LLM (no network) and assert the
+stream validates and the recording has no duplicate `seq`.
 
 ### Also noted (not a code defect, decision for the team)
 
