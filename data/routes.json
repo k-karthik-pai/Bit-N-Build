@@ -1,4 +1,6 @@
 [
   {"from_port_id": "dhamra", "to_port_id": "chittagong", "distance_km": 1350, "base_cost_per_tonne_usd": 7},
-  {"from_port_id": "dhamra", "to_port_id": "mongla", "distance_km": 1250, "base_cost_per_tonne_usd": 6}
+  {"from_port_id": "dhamra", "to_port_id": "mongla", "distance_km": 1250, "base_cost_per_tonne_usd": 6},
+  {"from_port_id": "mongla", "to_port_id": "chittagong", "distance_km": 250, "base_cost_per_tonne_usd": 1.5},
+  {"from_port_id": "chittagong", "to_port_id": "mongla", "distance_km": 250, "base_cost_per_tonne_usd": 1.5}
 ]
