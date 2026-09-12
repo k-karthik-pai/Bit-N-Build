@@ -27,12 +27,13 @@ find a buyer, negotiate terms, and route a shipment — autonomously.
 
 ## Setup
 
-(fill in once stack is chosen — placeholder)
-
-```bash
-# python venv / install deps
-pip install -r requirements.txt
-
-# run orchestrator against the fixed demo scenario
-python -m orchestrator.run
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python -m unittest discover -s tests -v
+.\.venv\Scripts\python -m orchestrator.run
+.\.venv\Scripts\python -m demo.web --replay demo/sample_run.jsonl
 ```
+
+For a quota-consuming live run, use `python -m demo.web --env-file env` with the
+team's untracked credential file. See `demo/README.md` for the presentation flow.

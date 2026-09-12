@@ -57,6 +57,7 @@ class ReliabilityTests(unittest.TestCase):
     def test_invalid_requests(self):
         cases = [{'quantity_tonnes': q} for q in (0, -1, True, '100', float('nan'), float('inf'))]
         cases += [{'seller_id': 'missing'}, {'objective': 'unsupported'}, {'material_id': ''},
+                  {'top_n': 1}, {'top_n': 6}, {'top_n': True}, {'record': 'yes'},
                   {'buyer_overrides': {'missing': {'annual_demand_tonnes': 5}}},
                   {'buyer_overrides': {'shah_cement': {'buyer_id': 'changed'}}}]
         for case in cases:

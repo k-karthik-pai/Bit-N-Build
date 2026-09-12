@@ -1318,14 +1318,14 @@ def _deterministic_fallback_offer(
         c_max = int(seller_constraints.get("contract_months_max", 36))
         c_pref = int(seller_constraints.get("preferred_contract_months", 24))
         contract_months = max(c_min, min(c_max, c_pref))
-        # concession schedule: start a bit high, shrink
-        # fallback should be defensible: hold near last own offer if exists, else use pref
+        # A fallback must never retract a concession. Reuse the last delivered
+        # seller terms exactly while they remain legal; if live competition has
+        # raised the floor, change only the price to that floor.
         last_own = next((o for o in reversed(history_offers) if o.get("_role") == "seller_agent"), None)
         if last_own is not None:
-            price = float(last_own["price_per_tonne_usd"])
-            # clamp to current dynamic floor (live competing offers may have raised it)
-            if price + 1e-9 < floor:
-                price = floor + 0.5
+            price = max(float(last_own["price_per_tonne_usd"]), floor)
+            qty = last_own["quantity_tonnes"]
+            contract_months = int(last_own["contract_months"])
         else:
             # anchor slightly above preferred but ensure floor
             price = max(floor, pref + 1.0)
@@ -1341,8 +1341,10 @@ def _deterministic_fallback_offer(
         else:
             qty_str = str(qty)
             qty_val = qty
-        # avoid stating reservation value: if price equals floor (within epsilon) nudge it
-        if abs(price - floor) < 0.01:
+        # Preserve the original opening behavior when there is no previous
+        # delivered seller offer. A held offer may equal the dynamic floor:
+        # its structured price makes that number legal under EVENTS.md.
+        if last_own is None and abs(price - floor) < 0.01:
             price = round(floor + 0.5, 2)
         msg = f"Holding at ${price:.2f}/t for {qty_str} t, {contract_months} months. (deterministic fallback)"
         return {
@@ -1377,7 +1379,13 @@ def _deterministic_fallback_offer(
         else:
             last_bid = float(last_own["price_per_tonne_usd"])
             price = round(last_bid + 0.4 * (ceiling - last_bid), 2)
+            qty = last_own["quantity_tonnes"]
+            contract_months = int(last_own["contract_months"])
         price = round(max(0.0, min(price, cap)), 2)
+        if last_own is not None:
+            # An earlier valid bid can legally be above the normal fallback cap.
+            # Holding it is safer than moving backwards in the negotiation.
+            price = max(price, round(last_bid, 2))
         if float(qty).is_integer():
             qty_str = str(int(qty))
             qty_val2: Any = int(qty)

@@ -270,10 +270,7 @@ Highlight the traversal path in the UI when a buyer is selected.
 ## 4. Doc housekeeping (do alongside section 1)
 
 - ~~`docs/AGENTS.md` §2 contract change~~ — done in Step 0.
-- `docs/PLAN.md` — the cut list still excludes the live step-by-step UI and real-time
-  feeds; update it to reflect this plan.
-- `docs/LIMITATIONS.md:9` and `docs/ROUTES_DISTANCE_FIX.md:17` — still say
-  `data/RESEARCH_FINDINGS.md` "was not committed"; it now is (`c824ace`).
-- `docs/LIMITATIONS.md` — the "Optional LLM dialogue is wording only" bullet becomes false
-  once section 1 lands; rewrite it to describe the validator-gated agent loop.
-- `README.md` / `demo/README.md` — add run instructions for the live UI and `--replay`.
+- ~~Update `docs/PLAN.md` for the live/replay dashboard.~~ Done.
+- ~~Correct the committed research references in `LIMITATIONS.md` and the route notes.~~ Done.
+- ~~Describe the validator-gated LLM loop in `LIMITATIONS.md`.~~ Done.
+- ~~Add current live UI and replay instructions to `README.md` / `demo/README.md`.~~ Done.

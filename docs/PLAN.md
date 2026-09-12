@@ -13,7 +13,7 @@ published aggregate trade data — see DATA.md).
 2. Negotiation Agent — constraint-validated deal-making between seller and a buyer
 3. Logistics Optimizer — route, cost, transit time between two ports (graph + shortest path)
 4. Orchestrator — wires the three above into one end-to-end run against the fixed scenario
-5. Demo output — terminal-style run log + a final "recommended deal" summary
+5. Demo output — live/replay dashboard plus a terminal log and final recommendation
 
 ## What we are explicitly NOT building (cut list)
 - Agricultural Micro-Economies module — reference it verbally in the pitch as "the same
@@ -23,7 +23,7 @@ published aggregate trade data — see DATA.md).
   own shipment
 - Interactive circularity graph visualization — only build if everything else is done and
   demo-stable with time to spare
-- Live step-by-step "simulation mode" UI — a clean log + summary card is enough
+- A separate simulated UI path — live and replay use the same validated event stream
 - Real-time/live data feeds of any kind — dataset is a fixed snapshot, not a live pipeline
 
 ## Timeline (adjust hours to actual slot length)

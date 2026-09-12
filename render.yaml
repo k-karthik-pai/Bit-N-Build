@@ -16,7 +16,45 @@ services:
         value: "4"
       - key: GEMINI_API_KEY
         sync: false
+      - key: GEMINI_2_API_KEY
+        sync: false
+      - key: GEMINI_3_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: NVIDIA_2_API_KEY
+        sync: false
+      - key: NVIDIA_3_API_KEY
+        sync: false
       - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_2_API_KEY
+        sync: false
+      - key: OPENROUTER_3_API_KEY
+        sync: false
+      - key: OPENROUTER_4_API_KEY
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: SELLER_LLM_CHAIN
+        value: "gemini:gemini-3.1-flash-lite,gemini:gemini-3.5-flash,nvidia:deepseek-ai/deepseek-v4-flash-0731"
+      - key: BUYER_1_LLM_CHAIN
+        value: "gemini_2:gemini-3.1-flash-lite,nvidia_2:deepseek-ai/deepseek-v4-flash-0731,gemini_2:gemini-3-flash-preview"
+      - key: BUYER_2_LLM_CHAIN
+        value: "nvidia_3:deepseek-ai/deepseek-v4-flash-0731,gemini_3:gemini-3.1-flash-lite"
+      - key: BUYER_3_LLM_CHAIN
+        value: "gemini_3:gemini-3.1-flash-lite,nvidia:deepseek-ai/deepseek-v4-flash-0731,gemini_3:gemini-3-flash-preview"
+      - key: GEMINI_REASONING_EFFORT
+        value: low
+      - key: GEMINI_RPM
+        value: "gemini-3.1-flash-lite:15,gemini-3.5-flash:5,gemini-3-flash-preview:5"
+      - key: GEMINI_RPD
+        value: "gemini-3.1-flash-lite:500,gemini-3.5-flash:20,gemini-3-flash-preview:20"
+      - key: NVIDIA_RPM
+        value: "40"
+      - key: NVIDIA_TIMEOUT_S
+        value: "10"
+      - key: OPENROUTER_RPM
+        value: "20"
+      - key: OPENROUTER_RPD
+        value: "50"

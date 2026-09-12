@@ -709,6 +709,56 @@ class NegotiationLoopTests(unittest.TestCase):
 
     # -- R4-2: buyer deterministic fallback concession schedule -------------
 
+    def test_seller_fallback_reuses_last_delivered_terms_exactly(self):
+        from agents.negotiation import _deterministic_fallback_offer
+
+        history = [{
+            "price_per_tonne_usd": 26.5,
+            "quantity_tonnes": 54321,
+            "contract_months": 18,
+            "_role": "seller_agent",
+        }]
+        move = _deterministic_fallback_offer(
+            "seller_agent", seller_constraints(), buyer(), 26.5, 7, 5, history,
+        )
+        self.assertEqual(
+            (move["price_per_tonne_usd"], move["quantity_tonnes"], move["contract_months"]),
+            (26.5, 54321, 18),
+        )
+
+    def test_seller_fallback_moves_only_to_a_raised_floor(self):
+        from agents.negotiation import _deterministic_fallback_offer
+
+        history = [{
+            "price_per_tonne_usd": 26.5,
+            "quantity_tonnes": 54321,
+            "contract_months": 18,
+            "_role": "seller_agent",
+        }]
+        move = _deterministic_fallback_offer(
+            "seller_agent", seller_constraints(), buyer(), 27.0, 7, 5, history,
+        )
+        self.assertEqual(
+            (move["price_per_tonne_usd"], move["quantity_tonnes"], move["contract_months"]),
+            (27.0, 54321, 18),
+        )
+
+    def test_buyer_fallback_never_retracts_its_last_bid(self):
+        from agents.negotiation import _deterministic_fallback_offer
+
+        history = [{
+            "price_per_tonne_usd": 27.8,
+            "quantity_tonnes": 40000,
+            "contract_months": 24,
+            "_role": "buyer_agent",
+        }]
+        move = _deterministic_fallback_offer(
+            "buyer_agent", seller_constraints(), buyer(), 22, 7, 5, history,
+        )
+        self.assertGreaterEqual(move["price_per_tonne_usd"], 27.8)
+        self.assertEqual(move["quantity_tonnes"], 40000)
+        self.assertEqual(move["contract_months"], 24)
+
     def test_buyer_fallback_concession_schedule_shrinking_steps_capped(self):
         from agents.negotiation import _deterministic_fallback_offer
         b = buyer(ceiling=28, demand=65000)

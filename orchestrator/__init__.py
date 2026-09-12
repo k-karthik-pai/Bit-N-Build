@@ -154,7 +154,7 @@ def _get_logistics(origin: str, destination: str, cargo: int, deadline: int) -> 
 # ---------------------------------------------------------------------------
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def _build_seller_constraints(seller: Dict[str, Any], quantity_tonnes: int) -> Dict[str, Any]:
@@ -184,6 +184,7 @@ def _run_concurrent_negotiations(
     seq_counter: List[int],
     seq_lock: threading.Lock,
     event_log: List[Dict[str, Any]],
+    record: bool,
 ) -> tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]], Dict[str, float]]:
     """
     Run top_n negotiations concurrently. Emits EVENTS.md envelopes if emit_event
@@ -220,16 +221,21 @@ def _run_concurrent_negotiations(
                 "delivered": delivered,
             }
             event_log.append(ev)
-            # persist to runs file if orchestrator created one
-            try:
-                runs_dir_inner = pathlib.Path(__file__).resolve().parents[1] / "runs"
-                run_file_inner = runs_dir_inner / f"{run_id}.jsonl"
-                with run_file_inner.open("a", encoding="utf-8") as f:
-                    f.write(json.dumps(ev) + "\n")
-            except Exception:
-                pass
-        if emit_event is not None:
-            emit_event(ev)
+            # The dashboard owns recording when record=False. Quota accounting
+            # remains independent in agents.negotiation/runs/.quota.json.
+            if record:
+                try:
+                    runs_dir_inner = pathlib.Path(__file__).resolve().parents[1] / "runs"
+                    run_file_inner = runs_dir_inner / f"{run_id}.jsonl"
+                    with run_file_inner.open("a", encoding="utf-8") as f:
+                        f.write(json.dumps(ev) + "\n")
+                except Exception:
+                    pass
+            # Keep callback publication under the sequence lock too. Without
+            # this, thread B can publish seq 10 before thread A publishes seq 9
+            # even though assignment and the orchestrator file are ordered.
+            if emit_event is not None:
+                emit_event(ev)
         # small pacing to keep timestamp ordering visible
         time.sleep(0.02)
 
@@ -379,6 +385,7 @@ def run_pipeline(
     top_n: int = 3,
     emit_event: Optional[Callable[[Dict[str, Any]], None]] = None,
     run_id: Optional[str] = None,
+    record: bool = True,
 ) -> Dict[str, Any]:
     """
     Deterministic pipeline: Circularity → Negotiation → Logistics → Final output.
@@ -388,6 +395,8 @@ def run_pipeline(
       top_n: number of concurrent buyers (3-5) when in concurrent mode (default 3)
       emit_event: callback receiving EVENTS.md envelope dicts for streaming UI
       run_id: identifier for the run (generated if not supplied)
+      record: write the event stream to runs/<run_id>.jsonl. The dashboard
+        passes False because its RunStore is the single recording owner.
 
     Legacy sequential BATNA path is used when use_llm is False and emit_event is None,
     preserving existing test behavior.
@@ -395,6 +404,11 @@ def run_pipeline(
     def emit(stage: str, **details: Any) -> None:
         if on_progress is not None:
             on_progress({"stage": stage, **details})
+
+    if isinstance(top_n, bool) or not isinstance(top_n, int) or not 3 <= top_n <= 5:
+        raise ValueError("top_n must be an integer from 3 to 5")
+    if not isinstance(record, bool):
+        raise ValueError("record must be boolean")
 
     emit("matching_started")
     if seller_overrides is not None and not isinstance(seller_overrides, dict):
@@ -456,15 +470,19 @@ def run_pipeline(
         seq_counter = [0]
         seq_lock = threading.Lock()
         event_log: List[Dict[str, Any]] = []
-        runs_dir = pathlib.Path(__file__).resolve().parents[1] / "runs"
-        runs_dir.mkdir(parents=True, exist_ok=True)
-        run_file = runs_dir / f"{effective_run_id}.jsonl"
-        # ensure file exists (truncate)
-        try:
-            run_file.write_text("", encoding="utf-8")
-        except Exception:
-            pass
+        run_file: Optional[pathlib.Path] = None
+        if record:
+            runs_dir = pathlib.Path(__file__).resolve().parents[1] / "runs"
+            runs_dir.mkdir(parents=True, exist_ok=True)
+            run_file = runs_dir / f"{effective_run_id}.jsonl"
+            # ensure file exists (truncate)
+            try:
+                run_file.write_text("", encoding="utf-8")
+            except Exception:
+                pass
         def _persist(ev: Dict[str, Any]) -> None:
+            if run_file is None:
+                return
             try:
                 with run_file.open("a", encoding="utf-8") as f:
                     f.write(json.dumps(ev) + "\n")
@@ -487,8 +505,8 @@ def run_pipeline(
                 }
                 event_log.append(ev)
                 _persist(ev)
-            if emit_event:
-                emit_event(ev)
+                if emit_event:
+                    emit_event(ev)
 
         # run_started
         _emit_envelope_top(None, "run_started", "orchestrator", None, None,
@@ -512,7 +530,7 @@ def run_pipeline(
         selected, deal_results, logistics_costs = _run_concurrent_negotiations(
             compatible_buyers, seller_constraints_new, logistics_cache, origin_port, quantity_tonnes,
             use_batna, use_llm, min(top_n, len(compatible_buyers)), emit_event, on_progress, seller,
-            effective_run_id, seq_counter, seq_lock, event_log,
+            effective_run_id, seq_counter, seq_lock, event_log, record,
         )
 
         # Final selection among agreed_pending (accepted/countered)
@@ -723,9 +741,26 @@ def run(*args, **kwargs) -> Dict[str, Any]:
     return run_pipeline(*args, **kwargs)
 
 
+def run_multi_agent(
+    *,
+    run_id: str,
+    top_n: int,
+    emit: Callable[[Dict[str, Any]], None],
+) -> Dict[str, Any]:
+    """Run the live negotiation for the dashboard without double-recording."""
+    return run_pipeline(
+        use_llm=True,
+        top_n=top_n,
+        run_id=run_id,
+        emit_event=emit,
+        record=False,
+    )
+
+
 __all__ = [
     "run_pipeline",
     "run",
+    "run_multi_agent",
     "FIXED_SCENARIO",
     "ORIGIN_PORT",
     "DEADLINE_DAYS",

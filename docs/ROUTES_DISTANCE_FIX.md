@@ -14,7 +14,7 @@ straight-line (haversine) floors (530 km and 330 km respectively), which is
 what a real sea route should do. `base_cost_per_tonne_usd` was left
 untouched throughout — only `distance_km` was ever wrong.
 
-The original `data/RESEARCH_FINDINGS.md` was not committed. See git history for the
+The original review predated the now-committed `data/RESEARCH_FINDINGS.md`. See it and the
 investigation (direct calculator fetches were blocked from the
 assistant's sandbox for most sites; searoutesnav.com worked and gave both
 final numbers once a teammate ran the lookups manually).

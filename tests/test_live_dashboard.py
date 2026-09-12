@@ -155,9 +155,9 @@ class StoreAndCoordinatorTests(unittest.TestCase):
             await __import__("asyncio").to_thread(release.wait)
 
         coordinator = RunCoordinator(self.store, live_runner=runner)
-        first = coordinator.create_live(top_n=1)
+        first = coordinator.create_live(top_n=3)
         with self.assertRaisesRegex(RuntimeError, "already active"):
-            coordinator.create_live(top_n=1)
+            coordinator.create_live(top_n=3)
         release.set()
         wait_for_terminal(self.store, first["run_id"])
 
@@ -171,13 +171,39 @@ class StoreAndCoordinatorTests(unittest.TestCase):
             raise RuntimeError("provider rejected secret-value")
 
         coordinator = RunCoordinator(self.store, live_runner=runner)
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "secret-value"}):
-            metadata = coordinator.create_live(top_n=1)
+        with patch.dict(os.environ, {"NVIDIA_2_API_KEY": "secret-value"}):
+            metadata = coordinator.create_live(top_n=3)
             wait_for_terminal(self.store, metadata["run_id"])
         events = self.store.events(metadata["run_id"])
         self.assertEqual(events[-1]["type"], "run_failed")
         self.assertNotIn("secret-value", events[-1]["payload"]["error"])
         self.assertIn("[redacted]", events[-1]["payload"]["error"])
+
+    def test_real_adapter_completes_offline_and_dashboard_records_each_event_once(self):
+        env_overrides = {
+            "GEMINI_API_KEY": "", "GEMINI_2_API_KEY": "", "GEMINI_3_API_KEY": "",
+            "OPENROUTER_API_KEY": "", "OPENROUTER_2_API_KEY": "", "OPENROUTER_3_API_KEY": "",
+            "OPENROUTER_4_API_KEY": "", "NVIDIA_API_KEY": "", "NVIDIA_2_API_KEY": "",
+            "NVIDIA_3_API_KEY": "", "OPENAI_API_KEY": "", "LLM_API_KEY": "",
+            "SELLER_LLM_CHAIN": "", "BUYER_LLM_CHAIN": "", "BUYER_1_LLM_CHAIN": "",
+            "BUYER_2_LLM_CHAIN": "", "BUYER_3_LLM_CHAIN": "",
+            "NEGOTIATION_LLM_MODEL": "",
+            "NEGOTIATION_QUOTA_FILE": str(self.root / ".quota.json"),
+        }
+        coordinator = RunCoordinator(self.store)
+        with patch.dict(os.environ, env_overrides, clear=False), patch(
+            "agents.negotiation._call_llm_for_move",
+            side_effect=AssertionError("network call in offline dashboard test"),
+        ):
+            metadata = coordinator.create_live(top_n=3)
+            finished = wait_for_terminal(self.store, metadata["run_id"], timeout=8)
+
+        self.assertEqual(finished["status"], "completed")
+        events = self.store.events(metadata["run_id"])
+        validate_run(events)
+        self.assertEqual([event["seq"] for event in events], list(range(1, len(events) + 1)))
+        self.assertEqual(events[-1]["type"], "run_completed")
+        self.assertFalse((ROOT / "runs" / f"{metadata['run_id']}.jsonl").exists())
 
     def test_interrupted_run_is_closed_during_restart_recovery(self):
         self.store.create("interrupted", {"run_id": "interrupted", "status": "running"})
@@ -237,6 +263,7 @@ class DashboardApiTests(unittest.TestCase):
         self.assertIn("event: run_completed", resumed.text)
 
     def test_api_rejects_invalid_input_and_unknown_runs(self):
+        self.assertEqual(self.client.post("/api/runs", json={"mode": "live", "top_n": 1}).status_code, 422)
         self.assertEqual(self.client.post("/api/runs", json={"mode": "live", "top_n": 9}).status_code, 422)
         self.assertEqual(self.client.post("/api/runs", json={"mode": "replay", "replay_file": "README.md"}).status_code, 422)
         self.assertEqual(self.client.get("/api/runs/no-such-run").status_code, 404)

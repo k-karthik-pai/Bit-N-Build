@@ -14,6 +14,7 @@ FIXED_AGENTS = {"seller_agent", "logistics_agent", "circularity_agent", "orchest
                 "validator", "runtime"}
 HANDLING, PROCESSING = 2.0, 1.5
 MAX_ROUNDS = 6
+TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
 
 def numbers_in(text: str):
     return {float(n.replace(",", "")) for n in re.findall(r"\d[\d,]*(?:\.\d+)?", text)}
@@ -50,6 +51,7 @@ def assert_events_valid(testcase: unittest.TestCase, events: List[Dict[str, Any]
         testcase.assertIn(e["type"], TYPES)
         testcase.assertTrue(valid_agent(e["from_agent"], buyers), f"seq {e['seq']} from_agent {e['from_agent']}")
         testcase.assertTrue(e["to_agent"] is None or valid_agent(e["to_agent"], buyers), f"seq {e['seq']} to_agent {e['to_agent']}")
+        testcase.assertRegex(e["ts"], TIMESTAMP_RE, f"seq {e['seq']} timestamp precision")
         ts = datetime.fromisoformat(e["ts"].replace("Z", "+00:00"))
         if previous_ts is not None:
             testcase.assertGreaterEqual(ts, previous_ts, f"seq {e['seq']}")

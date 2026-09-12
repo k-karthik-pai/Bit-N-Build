@@ -26,12 +26,14 @@ Live mode calls the asynchronous integration contract below and does not duplica
 orchestrator logic in the API layer:
 
 ```python
-async def run_multi_agent(*, run_id: str, top_n: int, emit: Callable[[dict], None]) -> dict:
+def run_multi_agent(*, run_id: str, top_n: int, emit: Callable[[dict], None]) -> dict:
     ...
 ```
 
-Until the multi-agent negotiation track exports that function, live mode terminates
-with an explicit `run_failed` event and the sample replay remains fully operational.
+The adapter runs the validator-gated negotiation engine with its own recorder disabled;
+the dashboard validates and records each event exactly once. Start it with
+`python -m demo.web --env-file env` when the team credential file is named `env`.
+The sample replay remains the no-network presentation fallback.
 
 ## Terminal output
 
@@ -67,17 +69,14 @@ message and a nonzero exit code instead of a success card.
 
 **How does the negotiation agent decide the price?**
 
-The current code proposes a price deterministically. It uses the seller's preferred
-price when it lies between the effective seller floor and the buyer's ceiling;
-otherwise it proposes the rounded midpoint of those bounds. The floor can be raised
-by BATNA (the best alternative to a negotiated agreement), calculated by the
-orchestrator from other buyers' baseline margins and this buyer's costs. A separate
-validator checks price bounds. No overlap means rejection; a compromise, narrow
-spread or thin margin produces a counteroffer. Quantity is capped by supply and
-buyer demand. The current pipeline sets `use_llm=False`, so this run does not use
-live LLM-generated dialogue (the negotiation agent supports it via OpenRouter, but
-the orchestrator keeps the demo run deterministic/reproducible). See
-`agents/negotiation/__init__.py` and `orchestrator/__init__.py`.
+In live mode, separate seller and buyer LLM contexts propose structured moves. A
+deterministic validator checks the proposing side's bounds, message grounding and
+leverage claims, and re-checks both sides before accepting a deal. Invalid moves are
+bounced for correction; repeated invalid moves or provider failures produce a visible
+deterministic fallback. The seller's live floor can rise from real buyer bids in other
+threads, while final selection remains deterministic by total net value. Replay shows
+the same event path without spending provider quota. See `agents/negotiation/__init__.py`
+and `orchestrator/__init__.py`.
 
 **How is route cost calculated?**
 
