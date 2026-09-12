@@ -244,7 +244,13 @@ def run_pipeline(
 
     # ---- Step 3a: baseline negotiation per buyer (no BATNA yet) ----
     # Needed to know what "the best alternative elsewhere" actually is before
-    # each buyer's real negotiation runs.
+    # each buyer's real negotiation runs. Kept as a PER-TONNE rate (not total
+    # value) deliberately: BATNA here means "what rate can I get elsewhere,"
+    # a real negotiating stance independent of any one buyer's quantity.
+    # (Total value is used for the final buyer *selection* below instead —
+    # scaling BATNA itself by total value causes per-tonne floors to blow up
+    # unrealistically for smaller buyers, since a tiny buyer would need an
+    # absurd rate to match a large buyer's total contribution.)
     baseline_net_value: Dict[str, Optional[float]] = {}
     if use_batna:
         emit("baseline_started")
@@ -259,7 +265,7 @@ def run_pipeline(
 
     # ---- Step 3b: negotiate for real, each buyer holding out for its BATNA ----
     best_deal: Optional[Dict[str, Any]] = None
-    best_net_value = -float("inf")
+    best_total_net_value = -float("inf")
     pipeline_log: List[Dict[str, Any]] = []
 
     for buyer in compatible_buyers:
@@ -294,7 +300,10 @@ def run_pipeline(
              quantity=deal["quantity_tonnes"], term=deal["contract_term_months"],
              reason=deal.get("validator_reason"))
 
-        net_value = _net_value(deal, logistics_cost)
+        per_tonne_net_value = _net_value(deal, logistics_cost)
+        total_net_value_for_deal = (
+            per_tonne_net_value * deal["quantity_tonnes"] if per_tonne_net_value is not None else None
+        )
         pipeline_log.append({
             "buyer_id": buyer["buyer_id"],
             "buyer_name": buyer.get("name"),
@@ -306,14 +315,19 @@ def run_pipeline(
             "reason": deal.get("validator_reason"),
         })
 
-        if net_value is not None and net_value > best_net_value:
-            best_net_value = net_value
+        # Objective is "maximize_net_value" — the seller has one fixed supply
+        # and closes exactly one deal, so this compares TOTAL value (margin *
+        # quantity), not per-tonne margin. A smaller buyer at a slightly
+        # better rate should not beat a much larger buyer overall.
+        if total_net_value_for_deal is not None and total_net_value_for_deal > best_total_net_value:
+            best_total_net_value = total_net_value_for_deal
             best_deal = {
                 "buyer": buyer,
                 "deal": deal,
                 "logistics": logistics,
                 "recommended_route_id": recommended_route_id,
-                "net_value_per_tonne": round(net_value, 2),
+                "net_value_per_tonne": round(per_tonne_net_value, 2),
+                "total_net_value": round(total_net_value_for_deal, 2),
             }
 
     if best_deal is None:
