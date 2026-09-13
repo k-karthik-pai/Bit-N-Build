@@ -17,9 +17,14 @@ estimated CO₂ saving.
 ### ▶ Live demo: <https://circularity-agent-live-demo.onrender.com/>
 
 Open the link and start a **Replay** to watch a full recorded negotiation, or **Live** to
-run the agents for real (about a minute; uses the team's LLM quota). Hosted on Render's
-free tier — after a period of inactivity the first load can take up to a minute while the
-service wakes up.
+run the agents for real (about a minute). Hosted on Render's free tier — after a period of
+inactivity the first load can take up to a minute while the service wakes up.
+
+> **Please use Live sparingly.** Every live run spends ~25–50 requests from the team's
+> free-tier LLM quota, which allows only a handful of runs per day. **Replay** shows the
+> same dashboard and agent behaviour at no cost — use it for browsing, and start one
+> Live run only when you want to see the agents negotiate in real time. To experiment
+> freely, run the project locally with your own API keys (see *Quick start*).
 
 ---
 

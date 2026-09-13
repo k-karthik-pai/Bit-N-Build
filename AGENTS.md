@@ -51,8 +51,10 @@ All entry points accept `--env-file PATH` (existing environment variables take p
 service defined in `render.yaml` (`uvicorn demo.web:app`). API keys live
 in Render environment variables, never in the repo. Its filesystem is ephemeral, so
 `runs/` recordings and `runs/.quota.json` reset on restart. Live mode there spends the
-team's real quota — don't point load tests or automated checks at `POST /api/runs` with
-`mode: live`; use replay.
+team's real quota (~25–50 requests per run, only a handful of runs per day) — use it
+**minimally**: at most one live run to confirm a deploy, never for testing or iteration,
+and never point load tests or automated checks at `POST /api/runs` with `mode: live`.
+Use replay there, and do live testing locally with your own keys.
 
 ---
 
