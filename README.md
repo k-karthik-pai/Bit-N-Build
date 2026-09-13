@@ -159,6 +159,8 @@ booked, and an "accepted" outcome is a simulation, not a contract.
 - **Live mode depends on external LLM providers** and their free-tier quotas. If a provider
   fails, the deterministic fallback keeps the run going and says so in the event stream;
   replay mode is the no-network backup.
+- **Recordings:** JSONL files under `runs/` can include private agent rationales; review them
+  before sharing externally.
 
 ---
 
