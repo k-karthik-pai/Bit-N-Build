@@ -12,6 +12,24 @@ slag to compatible cement buyers, routes it from Dhamra port, negotiates with th
 buyers simultaneously, and recommends the deal with the highest total net value — with an
 estimated CO₂ saving.
 
+**Track:** Supply Chain Circularity & Industrial Symbiosis.
+
+---
+
+## The problem
+
+Heavy industry produces millions of tonnes of by-products — steel slag, fly ash, spent
+catalysts — that another industry could use as raw material. Most of it is landfilled or
+sold cheaply because connecting a producer to the right buyer is slow, manual work:
+finding who can technically use the material, checking quality specs, pricing freight,
+and negotiating terms one buyer at a time. Every deal that doesn't happen means disposal
+costs for the seller, virgin raw material (and its emissions) for the buyer.
+
+LLM agents could automate this, but a negotiating LLM left alone will happily invent a
+price, reveal its client's walk-away number, or bluff about offers that don't exist.
+CIRCUIT's answer: **let the LLMs negotiate, but make every number they use pass a
+deterministic check first.**
+
 ---
 
 ## How it works
@@ -50,6 +68,48 @@ flowchart LR
 The dashboard streams all of this live: buyer cards, one chat thread per negotiation,
 private agent reasoning, validator bounces, a price-convergence chart and the final
 recommendation card.
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Language | Python 3.11+ |
+| LLM agents | Google **Gemini 3.1 Flash-Lite** (primary; Gemini 3.5 Flash / 3 Flash as backups), **NVIDIA NIM DeepSeek V4 Flash** (last-resort backup), OpenRouter (optional) — all called through the `openai` Python SDK against each provider's OpenAI-compatible API |
+| Agent protocol | Structured JSON moves, validated by deterministic Python gates; per-provider pacing, daily-quota tracking and fallback chains |
+| Matching | Knowledge graph (material → application → buyer) with threshold-based traversal, pure Python |
+| Routing | Port graph with path enumeration, haversine distances, freight and transit-time model, pure Python |
+| Backend / API | FastAPI, Pydantic, Uvicorn; live updates over Server-Sent Events (SSE) |
+| Dashboard | Vanilla HTML, CSS and JavaScript with inline SVG charts — no front-end build step |
+| Data | JSON snapshot (seller, 25 buyers, materials, ports, routes) generated from researched anchors |
+| Config | `python-dotenv` (`.env`, gitignored) |
+| Testing | `unittest` (pytest-compatible), 94 offline tests — every provider call is blocked in tests |
+| Deployment | Render (`render.yaml`, free web-service plan) |
+
+---
+
+## How it maps to the judging criteria
+
+**Agentic AI implementation.** Four LLM agents make real decisions: a seller agent runs
+three negotiations at once and each buyer agent bargains for its own company, with private
+information on both sides. They choose offers, concessions, contract terms and when to
+walk away. The LLM *proposes*; a deterministic validator *decides* whether each move is
+legal — so agent autonomy never comes at the cost of invented numbers. In live runs the
+validator has caught agents bluffing ("we have a better offer elsewhere" with no such
+offer) and bounced the move.
+
+**Technical implementation.** Three clearly separated agents (matching, logistics,
+negotiation) plus a deterministic orchestrator, a frozen event contract shared by the
+engine and the dashboard, provider fallback chains with pacing and quota tracking,
+concurrent negotiation threads that influence each other through the seller's live
+floor, and a fully offline test suite.
+
+**Solution effectiveness.** Every figure on the recommendation card is recomputed from
+the same formula (price − freight − handling − processing, × quantity) and checked by
+tests; the matching path explains *why* each buyer qualified; the CO₂ figure is
+explicitly an estimate. A typical live run closes with Shah Cement at about $26–27/t for
+65,000 t (≈ $1.04–1.07 M net value, ≈ 55,000 t CO₂ avoided, estimated) in about a minute.
 
 ---
 
@@ -164,6 +224,25 @@ booked, and an "accepted" outcome is a simulation, not a contract.
 
 ---
 
+## Future scope
+
+- **More materials and regions** — the knowledge graph and agents are material-agnostic;
+  fly ash, spent catalysts or agricultural residues need only new data, not new code.
+- **Multi-buyer allocation** — split one seller's supply across several buyers instead of
+  closing a single deal.
+- **Live market data** — replace the snapshot with freight indices and commodity prices.
+- **Human-in-the-loop approval** — route agreed deals to a person for sign-off before any
+  real commitment.
+
+---
+
+## Team
+
+Built for the Bit N Build hackathon by **Mayaskara**, **K Karthik Pai**, **Karan-Koder**
+and **Keshav-Ag-11**.
+
+---
+
 ## License
 
-See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
