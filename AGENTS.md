@@ -47,6 +47,13 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 All entry points accept `--env-file PATH` (existing environment variables take precedence).
 
+**Deployment:** <https://circularity-agent-live-demo.onrender.com/> — Render free web
+service defined in `render.yaml` (`uvicorn demo.web:app`). API keys live
+in Render environment variables, never in the repo. Its filesystem is ephemeral, so
+`runs/` recordings and `runs/.quota.json` reset on restart. Live mode there spends the
+team's real quota — don't point load tests or automated checks at `POST /api/runs` with
+`mode: live`; use replay.
+
 ---
 
 ## Architecture map

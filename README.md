@@ -14,6 +14,13 @@ estimated CO₂ saving.
 
 **Track:** Supply Chain Circularity & Industrial Symbiosis.
 
+### ▶ Live demo: <https://circularity-agent-live-demo.onrender.com/>
+
+Open the link and start a **Replay** to watch a full recorded negotiation, or **Live** to
+run the agents for real (about a minute; uses the team's LLM quota). Hosted on Render's
+free tier — after a period of inactivity the first load can take up to a minute while the
+service wakes up.
+
 ---
 
 ## The problem
@@ -178,7 +185,8 @@ Run the tests (fully offline, a few seconds):
 
 ### Deploying
 
-`render.yaml` deploys the dashboard to [Render](https://render.com). Set API keys as
+The public demo runs at <https://circularity-agent-live-demo.onrender.com/> (interactive API
+docs at `/api/docs`). `render.yaml` deploys the dashboard to [Render](https://render.com). Set API keys as
 Render environment variables, not in the repository. Render's disk is ephemeral; attach a
 disk and set `RUNS_DIR=/var/data/runs` to keep recordings.
 
