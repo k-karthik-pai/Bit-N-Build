@@ -14,6 +14,8 @@ estimated CO₂ saving.
 
 **Track:** Supply Chain Circularity & Industrial Symbiosis.
 
+### 🎬 Demo video: [watch on Google Drive](https://drive.google.com/file/d/1LZr_9DCnMF5REItjaaY10pZ8Ihch80gH/view?usp=sharing)
+
 ### ▶ Live demo: <https://circularity-agent-live-demo.onrender.com/>
 
 Open the link and start a **Replay** to watch a full recorded negotiation, or **Live** to
